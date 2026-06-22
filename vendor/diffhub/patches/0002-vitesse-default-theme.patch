@@ -1,0 +1,26 @@
+Index: b/apps/diffhub/components/PreloadHighlighter.tsx
+===================================================================
+--- a/apps/diffhub/components/PreloadHighlighter.tsx
++++ b/apps/diffhub/components/PreloadHighlighter.tsx
+@@ -10,6 +10,8 @@
+         'pierre-dark-soft',
+         'pierre-light',
+         'pierre-light-soft',
++        'vitesse-dark',
++        'vitesse-light',
+       ],
+       langs: ['zig', 'rust', 'typescript', 'tsx', 'bash'],
+       preferredHighlighter: 'shiki-wasm',
+Index: b/apps/diffhub/components/themeCatalog.ts
+===================================================================
+--- a/apps/diffhub/components/themeCatalog.ts
++++ b/apps/diffhub/components/themeCatalog.ts
+@@ -3,6 +3,6 @@
+ 
+ export const docsThemeCatalog = createThemeCatalog({
+   themes,
+-  defaultLightThemeName: 'pierre-light-soft',
+-  defaultDarkThemeName: 'pierre-dark-soft',
++  defaultLightThemeName: 'vitesse-light',
++  defaultDarkThemeName: 'vitesse-dark',
+ });
