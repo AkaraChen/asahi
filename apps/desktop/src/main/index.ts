@@ -1,5 +1,10 @@
-import { startDiffApiServer, type DiffApiServer } from '@asahi/server/node';
+import {
+  DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER,
+  startDiffApiServer,
+  type DiffApiServer,
+} from '@asahi/server/node';
 import { app, BrowserWindow, WebContentsView, ipcMain, shell } from 'electron';
+import { randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -31,13 +36,17 @@ import type {
 } from '../shared/desktopTabs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
+const diffApiAccessToken = randomBytes(32).toString('base64url');
 let diffServerPromise: Promise<DiffApiServer> | undefined;
 const viewerTabs = new Map<string, WebContentsView>();
 let mainWindow: BrowserWindow | undefined;
 let activeTabId = DESKTOP_HOME_TAB_ID;
 
 function getDiffServer(): Promise<DiffApiServer> {
-  diffServerPromise ??= startDiffApiServer({ getGitHubAuthToken });
+  diffServerPromise ??= startDiffApiServer({
+    accessToken: diffApiAccessToken,
+    getGitHubAuthToken,
+  });
   return diffServerPromise;
 }
 
@@ -159,6 +168,11 @@ ipcMain.handle('asahi:get-api-base-url', async () => {
   const server = await getDiffServer();
   return server.origin;
 });
+
+ipcMain.handle('asahi:get-api-access-token', () => ({
+  header: DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER,
+  token: diffApiAccessToken,
+}));
 
 ipcMain.handle(LIST_REPOSITORY_OWNERS_CHANNEL, () =>
   listGitHubRepositoryOwners()

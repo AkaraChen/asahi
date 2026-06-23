@@ -17,4 +17,21 @@ describe('startDiffApiServer', () => {
       await server.close();
     }
   });
+
+  test('requires the desktop access token when configured', async () => {
+    const accessToken = 'test-desktop-token';
+    const server = await startDiffApiServer({ accessToken });
+    try {
+      const rejected = await fetch(`${server.origin}/api/diff`);
+      expect(rejected.status).toBe(403);
+
+      const accepted = await fetch(`${server.origin}/api/diff`, {
+        headers: { 'x-asahi-desktop-token': accessToken },
+      });
+      expect(accepted.status).toBe(400);
+      expect(await accepted.text()).toBe('Path or URL parameter is required');
+    } finally {
+      await server.close();
+    }
+  });
 });

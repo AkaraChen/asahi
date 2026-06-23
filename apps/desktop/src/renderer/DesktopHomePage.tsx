@@ -11,10 +11,12 @@ import type {
   DesktopRepository,
   DesktopSelectedRepository,
 } from '../shared/githubPullRequests';
+import {
+  parseSelectedRepositories,
+  SELECTED_REPOSITORIES_KEY,
+} from '../shared/selectedRepositories';
 import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
 import Link from './next-link';
-
-const SELECTED_REPOSITORIES_KEY = 'asahi:selected-repositories';
 
 type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
 type UpdatedFilter = 'all' | '24h' | '7d' | '30d';
@@ -608,11 +610,7 @@ function matchesUpdatedFilter(value: string, filter: UpdatedFilter): boolean {
 }
 
 function readSelectedRepositories(): DesktopSelectedRepository[] {
-  try {
-    return JSON.parse(localStorage.getItem(SELECTED_REPOSITORIES_KEY) ?? '[]');
-  } catch {
-    return [];
-  }
+  return parseSelectedRepositories(localStorage.getItem(SELECTED_REPOSITORIES_KEY));
 }
 
 function LoadingRows() {

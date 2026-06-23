@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import pLimit from 'p-limit';
 
 import type {
   DesktopGitHubFailure,
@@ -16,6 +17,7 @@ import type {
 
 const execFileAsync = promisify(execFile);
 const MERGE_PERMISSIONS = new Set(['WRITE', 'MAINTAIN', 'ADMIN']);
+const PULL_REQUEST_FETCH_CONCURRENCY = 4;
 
 const PULL_REQUESTS_QUERY = `
   query($owner: String!, $name: String!, $after: String) {
@@ -173,8 +175,11 @@ export async function listGitHubPullRequestsForRepositories(
   request: DesktopListPullRequestsRequest
 ): Promise<DesktopPullRequestResult> {
   try {
+    const limit = pLimit(PULL_REQUEST_FETCH_CONCURRENCY);
     const results = await Promise.all(
-      request.repositories.map(loadPullRequestsForRepository)
+      request.repositories.map((repository) =>
+        limit(() => loadPullRequestsForRepository(repository))
+      )
     );
 
     return {

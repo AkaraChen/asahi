@@ -54,4 +54,5 @@ describe('githubPullRequests', () => {
       viewerPermission: 'ADMIN',
     });
   });
+
 });

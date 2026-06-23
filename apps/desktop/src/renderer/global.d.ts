@@ -16,6 +16,7 @@ declare global {
   interface Window {
     asahi: {
       closeViewerTab(id: string): Promise<void>;
+      getApiAccessToken(): Promise<{ header: string; token: string }>;
       getApiBaseURL(): Promise<string>;
       listOwnerRepositories(
         request: DesktopListOwnerRepositoriesRequest

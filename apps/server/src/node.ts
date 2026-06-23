@@ -3,8 +3,13 @@ import { serve, type ServerType } from '@hono/node-server';
 import { createDiffApi, type DiffApiOptions } from './diff';
 
 const HOSTNAME = '127.0.0.1';
+export const DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER = 'x-asahi-desktop-token';
+const ACCESS_CONTROL_ALLOW_HEADERS = [
+  'content-type',
+  DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER,
+].join(', ');
 const CORS_HEADERS = {
-  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Headers': ACCESS_CONTROL_ALLOW_HEADERS,
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Origin': '*',
 } as const;
@@ -18,6 +23,7 @@ export interface DiffApiServer {
 }
 
 export interface StartDiffApiServerOptions {
+  accessToken?: string;
   getGitHubAuthToken?: DiffApiOptions['getGitHubAuthToken'];
 }
 
@@ -32,7 +38,8 @@ export function startDiffApiServer(
     let settled = false;
     const server = serve(
       {
-        fetch: (request) => fetchWithDesktopCors(request, diffApi),
+        fetch: (request) =>
+          fetchWithDesktopCors(request, diffApi, options.accessToken),
         hostname: HOSTNAME,
         overrideGlobalObjects: false,
         port: 0,
@@ -57,10 +64,18 @@ export function startDiffApiServer(
 
 async function fetchWithDesktopCors(
   request: Request,
-  diffApi: DiffApi
+  diffApi: DiffApi,
+  accessToken: string | undefined
 ): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS, status: 204 });
+  }
+
+  if (
+    accessToken != null &&
+    request.headers.get(DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER) !== accessToken
+  ) {
+    return new Response('Forbidden', { headers: CORS_HEADERS, status: 403 });
   }
 
   const response = await diffApi.fetch(request);

@@ -14,6 +14,7 @@ import {
 contextBridge.exposeInMainWorld('asahi', {
   closeViewerTab: (id: string) =>
     ipcRenderer.invoke(DESKTOP_CLOSE_VIEWER_TAB_CHANNEL, id),
+  getApiAccessToken: () => ipcRenderer.invoke('asahi:get-api-access-token'),
   getApiBaseURL: () => ipcRenderer.invoke('asahi:get-api-base-url'),
   listOwnerRepositories: (request: unknown) =>
     ipcRenderer.invoke(LIST_OWNER_REPOSITORIES_CHANNEL, request),
