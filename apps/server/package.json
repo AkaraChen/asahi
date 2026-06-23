@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./diff": "./src/diff.ts",
+    "./node": "./src/node.ts",
     "./next": "./src/next.ts"
   },
   "scripts": {
@@ -12,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.5",
     "hono": "^4.12.26"
   },
   "devDependencies": {

@@ -1,0 +1,30 @@
+{
+  "name": "desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "build": "electron-vite build",
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^42.4.1",
+    "electron-vite": "^5.0.0",
+    "typescript": "catalog:",
+    "vite": "^7.3.5"
+  },
+  "dependencies": {
+    "@asahi/app": "workspace:*",
+    "@asahi/server": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  }
+}

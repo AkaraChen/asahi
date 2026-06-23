@@ -3,15 +3,18 @@
   "private": true,
   "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "build": "pnpm build:agent && pnpm build:app && pnpm build:server && pnpm build:web",
+    "build": "pnpm build:agent && pnpm build:app && pnpm build:server && pnpm build:web && pnpm build:desktop",
     "build:app": "pnpm --dir apps/app typecheck",
     "build:agent": "pnpm --filter agent build",
+    "build:desktop": "pnpm --dir apps/desktop build",
     "build:server": "pnpm --dir apps/server typecheck",
     "build:web": "pnpm --dir apps/web build",
     "dev": "pnpm --filter agent dev",
+    "dev:desktop": "pnpm --dir apps/desktop dev",
     "dev:web": "pnpm build:web && pnpm --dir apps/web dev",
     "connect": "pnpm --filter agent connect",
     "typecheck:app": "pnpm --dir apps/app typecheck",
+    "typecheck:desktop": "pnpm --dir apps/desktop typecheck",
     "typecheck:server": "pnpm --dir apps/server typecheck",
     "typecheck:web": "pnpm --dir apps/web typecheck"
   }
