@@ -3,19 +3,12 @@
   "private": true,
   "packageManager": "pnpm@11.8.0",
   "scripts": {
-    "build": "pnpm build:agent && pnpm build:diffhub",
+    "build": "pnpm build:agent && pnpm build:diffshub",
     "build:agent": "pnpm --filter agent build",
-    "build:diffhub": "pnpm --dir apps/diffhub build",
+    "build:diffshub": "pnpm --dir apps/diffshub build",
     "dev": "pnpm --filter agent dev",
-    "dev:diffhub": "pnpm build:diffhub && pnpm --dir apps/diffhub dev",
+    "dev:diffshub": "pnpm build:diffshub && pnpm --dir apps/diffshub dev",
     "connect": "pnpm --filter agent connect",
-    "typecheck:diffhub": "pnpm --dir apps/diffhub typecheck",
-    "diffhub:push": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - push -a",
-    "diffhub:pop": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - pop -a",
-    "diffhub:add": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - add",
-    "diffhub:refresh": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - refresh -p ab --no-timestamps",
-    "diffhub:diff": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - diff",
-    "diffhub:series": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - series",
-    "diffhub:applied": "QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - applied"
+    "typecheck:diffshub": "pnpm --dir apps/diffshub typecheck"
   }
 }

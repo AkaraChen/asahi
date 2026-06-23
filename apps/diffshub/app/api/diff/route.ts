@@ -1,4 +1,5 @@
-import { type NextRequest } from 'next/server';
+import { Hono } from 'hono';
+import { handle } from 'hono/vercel';
 
 const CACHE_CONTROL = 'no-store';
 const EMPTY_PATCH_MESSAGE = 'GitHub returned an empty diff.';
@@ -43,14 +44,15 @@ interface ResolvedPatchRequest {
   sourceURL?: string;
 }
 
+const app = new Hono().basePath('/api');
+
 // Validates the accepted path or URL, normalizes it to a raw diff URL, and
 // returns a streaming proxy response so the client can render files as they
 // arrive instead of waiting for the full patch text.
-export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const path = searchParams.get('path');
-  const domain = searchParams.get('domain');
-  const url = searchParams.get('url');
+app.get('/diff', async (context) => {
+  const path = context.req.query('path') ?? null;
+  const domain = context.req.query('domain') ?? null;
+  const url = context.req.query('url') ?? null;
 
   if (path == null && url == null) {
     return createTextResponse('Path or URL parameter is required', {
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     return await createPatchStreamResponse(
       patchRequest.patchURL,
-      request.signal,
+      context.req.raw.signal,
       {
         sourceURL: patchRequest.sourceURL ?? patchRequest.patchURL,
       }
@@ -83,7 +85,9 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
+
+export const GET = handle(app);
 
 // Resolves the accepted URL shapes to the exact upstream URL to fetch. Most
 // callers send a GitHub-relative path, but this also permits GitHub's raw PR

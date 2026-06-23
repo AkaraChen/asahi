@@ -99,7 +99,7 @@ importers:
         specifier: ^1.0.0-beta.1
         version: 1.0.0-beta.1(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(@types/node@26.0.0)(esbuild@0.28.1)(jiti@2.7.0)(typebox@1.1.38)(typescript@5.9.2)(workerd@1.20260617.1)(wrangler@4.103.0)(ws@8.21.0)(yaml@2.9.0)(zod-to-json-schema@3.25.2(zod@4.4.3))(zod@4.4.3)
 
-  apps/diffhub:
+  apps/diffshub:
     dependencies:
       '@floating-ui/react':
         specifier: 'catalog:'
@@ -140,6 +140,9 @@ importers:
       clsx:
         specifier: 'catalog:'
         version: 2.1.1
+      hono:
+        specifier: ^4.12.26
+        version: 4.12.26
       lucide-react:
         specifier: 'catalog:'
         version: 0.545.0(react@19.2.3)

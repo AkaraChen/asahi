@@ -1,32 +1,19 @@
 # AGENTS.md
 
-## DiffHub Vendor Patches
+## DiffsHub Fork
 
-DiffHub is vendored from `pierrecomputer/pierre` using a quilt patch queue.
-The upstream commit and source path live in `vendor/diffhub/source.json`, and
-patches live in `vendor/diffhub/patches/series`.
+DiffsHub lives in `apps/diffshub` as a direct fork of
+`pierrecomputer/pierre/apps/diffshub`.
+
+Edit `apps/diffshub` directly and commit the resulting tree. Do not recreate a
+separate vendor mirror, patch queue, or patch-management scripts.
 
 Use these commands:
 
-- `pnpm diffhub:push` applies all patches.
-- `pnpm diffhub:pop` removes all applied patches.
-- `pnpm diffhub:add -- apps/diffhub/path/to/file` adds a changed file to the current patch.
-- `pnpm diffhub:refresh` refreshes the current top patch.
-- `pnpm diffhub:diff` shows the current quilt diff.
+- `pnpm build:diffshub` builds the app.
+- `pnpm dev:diffshub` builds once, then starts the app.
+- `pnpm typecheck:diffshub` runs TypeScript checks for the app.
 
-To rebuild `apps/diffhub` after deleting it:
-
-```sh
-rm -rf /tmp/pierre-diffhub apps/diffhub vendor/diffhub/.pc
-git clone --filter=blob:none --sparse https://github.com/pierrecomputer/pierre.git /tmp/pierre-diffhub
-git -C /tmp/pierre-diffhub fetch --depth 1 origin 934f013928fbff37df72a097d53410b748ea6be4
-git -C /tmp/pierre-diffhub checkout 934f013928fbff37df72a097d53410b748ea6be4
-git -C /tmp/pierre-diffhub sparse-checkout set apps/diffshub
-mkdir -p apps
-cp -R /tmp/pierre-diffhub/apps/diffshub apps/diffhub
-QUILT_PATCHES=vendor/diffhub/patches QUILT_PC=vendor/diffhub/.pc quilt --quiltrc - push -a
-```
-
-Do not vendor published `@pierre/*` packages locally. Keep them as npm
-dependencies unless a package is unpublished or the app cannot work with the
-published version.
+When syncing from upstream, clone or fetch `pierrecomputer/pierre` in a
+temporary directory, compare `apps/diffshub`, and copy or merge the needed
+changes into this fork.
