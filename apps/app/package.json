@@ -1,0 +1,46 @@
+{
+  "name": "@asahi/app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./layout": "./src/layout.ts",
+    "./pages/github-redirect": "./src/pages/GitHubRedirectPage.tsx",
+    "./pages/home": "./src/pages/home/HomePage.tsx",
+    "./pages/viewer": "./src/pages/DiffsHubViewByPathPage.tsx",
+    "./site": "./src/lib/site.ts"
+  },
+  "scripts": {
+    "test": "bun test test src/lib/test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@floating-ui/react": "catalog:",
+    "@pierre/diffs": "1.2.11",
+    "@pierre/icons": "catalog:",
+    "@pierre/theme": "1.0.3",
+    "@pierre/theming": "0.0.1",
+    "@pierre/trees": "1.0.0-beta.4",
+    "@pierre/truncate": "0.0.2",
+    "@radix-ui/react-dropdown-menu": "catalog:",
+    "@radix-ui/react-slot": "catalog:",
+    "@radix-ui/react-switch": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "sonner": "catalog:",
+    "tailwind-merge": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/jsdom": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

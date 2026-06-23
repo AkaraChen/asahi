@@ -3,7 +3,13 @@
   "files": [],
   "references": [
     {
-      "path": "apps/diffshub/tsconfig.json"
+      "path": "apps/app/tsconfig.json"
+    },
+    {
+      "path": "apps/server/tsconfig.json"
+    },
+    {
+      "path": "apps/web/tsconfig.json"
     }
   ]
 }
