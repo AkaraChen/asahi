@@ -13,6 +13,7 @@ interface ExampleAnnotationProps {
   itemId: string;
   onDelete(itemId: string, key: string): void;
   onToggleSelection(selection: CodeViewLineSelection): void;
+  authorAvatarUrl?: string;
 }
 
 export const ExampleAnnotation = memo(function ExampleAnnotation({
@@ -20,6 +21,7 @@ export const ExampleAnnotation = memo(function ExampleAnnotation({
   itemId,
   onDelete,
   onToggleSelection,
+  authorAvatarUrl,
 }: ExampleAnnotationProps) {
   const selection = { id: itemId, range: annotation.metadata.range };
   return (
@@ -39,7 +41,10 @@ export const ExampleAnnotation = memo(function ExampleAnnotation({
         onToggleSelection(selection);
       }}
     >
-      <CommentAuthorAvatar seed={annotation.metadata.author} />
+      <CommentAuthorAvatar
+        seed={annotation.metadata.author}
+        avatarSrc={annotation.metadata.avatarUrl ?? authorAvatarUrl}
+      />
       <Button
         variant="default"
         size="icon-sm"

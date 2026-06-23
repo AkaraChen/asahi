@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQueries,
+} from '@tanstack/react-query';
 import { ReviewUI } from '@asahi/app/components/review-ui';
 import {
   PreloadHighlighter,
@@ -13,8 +17,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DESKTOP_HOME_TAB_ID,
   DESKTOP_TAB_BAR_HEIGHT,
+  getViewerTabPath,
 } from '../shared/desktopTabs';
-import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
+import type {
+  DesktopViewerPrTabRequest,
+  DesktopViewerTabRequest,
+} from '../shared/desktopTabs';
+import type { DesktopPullRequest } from '../shared/githubPullRequests';
 import { DesktopHomePage } from './DesktopHomePage';
 import { navigateDesktop } from './navigation';
 
@@ -22,6 +31,8 @@ const queryClient = new QueryClient();
 
 interface DesktopLocation {
   domain?: string;
+  prViewerAvatarUrl?: string;
+  prTitle?: string;
   href: string;
   pathSegments: string[];
   routeKey: string;
@@ -56,16 +67,113 @@ function DesktopRouter() {
 function DesktopTabShell({ location }: { location: DesktopLocation }) {
   const [tabs, setTabs] = useState<DesktopViewerTabRequest[]>([]);
   const [activeTabId, setActiveTabId] = useState(DESKTOP_HOME_TAB_ID);
+  const prRepoKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const tab of tabs) {
+      if (tab.type !== 'pr') continue;
+      keys.add(`${tab.owner}/${tab.repo}`);
+    }
+    return [...keys];
+  }, [tabs]);
+
+  const prQueries = useQueries({
+    queries: prRepoKeys.map((key) => {
+      const [owner, repo] = key.split('/');
+      return {
+        queryKey: ['desktop-prs', owner, repo],
+        queryFn: async () => {
+          const result = await window.asahi.listRepositoryPullRequests({
+            repositories: [
+              {
+                owner,
+                name: repo,
+                nameWithOwner: `${owner}/${repo}`,
+              },
+            ],
+          });
+          if (!result.ok) {
+            throw new Error(result.message);
+          }
+          return result.items;
+        },
+        staleTime: 60_000,
+      };
+    }),
+  });
+
+  const prQueryByRepo = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof prQueries[number]>>();
+    for (let i = 0; i < prRepoKeys.length; i += 1) {
+      map.set(prRepoKeys[i], prQueries[i]);
+    }
+    return map;
+  }, [prQueries, prRepoKeys]);
+
+  const getPrTabLabel = useCallback(
+    (tab: DesktopViewerPrTabRequest) => {
+      const query = prQueryByRepo.get(`${tab.owner}/${tab.repo}`);
+      const title = query?.data?.find(
+        (item: DesktopPullRequest) =>
+          item.number === tab.number &&
+          item.owner === tab.owner &&
+          item.repo === tab.repo
+      )?.title;
+
+      return title ?? `${tab.owner}/${tab.repo} #${tab.number}`;
+    },
+    [prQueryByRepo]
+  );
+
+  const getPrTabViewerAvatarUrl = useCallback(
+    (tab: DesktopViewerPrTabRequest) => {
+      const query = prQueryByRepo.get(`${tab.owner}/${tab.repo}`);
+      const viewerAvatarUrl = query?.data?.find(
+        (item: DesktopPullRequest) =>
+          item.number === tab.number &&
+          item.owner === tab.owner &&
+          item.repo === tab.repo
+      )?.viewerAvatarUrl;
+
+      if (viewerAvatarUrl == null || viewerAvatarUrl.trim() === '') {
+        return undefined;
+      }
+
+      return viewerAvatarUrl;
+    },
+    [prQueryByRepo]
+  );
 
   const openViewerTab = useCallback(
     (tab: DesktopViewerTabRequest) => {
+      const nextTab: DesktopViewerTabRequest =
+        tab.type === 'pr' &&
+        (tab.title == null || tab.viewerAvatarUrl == null)
+          ? {
+              ...tab,
+              title: tab.title ?? getPrTabLabel(tab),
+              viewerAvatarUrl:
+                tab.viewerAvatarUrl ?? getPrTabViewerAvatarUrl(tab),
+            }
+          : tab;
+
       setTabs((current) =>
-        current.some((item) => item.id === tab.id) ? current : [...current, tab]
+        current.some((item) => item.id === nextTab.id)
+          ? current.map((item) =>
+              item.id === nextTab.id
+                ? {
+                    ...item,
+                    viewerAvatarUrl:
+                      nextTab.viewerAvatarUrl ?? item.viewerAvatarUrl,
+                    title: nextTab.title,
+                  }
+                : item
+            )
+          : [...current, nextTab]
       );
-      setActiveTabId(tab.id);
-      void window.asahi.openViewerTab(tab);
+      setActiveTabId(nextTab.id);
+      void window.asahi.openViewerTab(nextTab);
     },
-    []
+    [getPrTabLabel, getPrTabViewerAvatarUrl]
   );
 
   useEffect(() => {
@@ -74,12 +182,10 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
 
   useEffect(() => {
     if (location.pathSegments.length === 0) return;
+    const tab = parseDesktopViewerTab(location.href);
+    if (tab == null) return;
 
-    openViewerTab({
-      id: location.href,
-      path: location.href,
-      title: location.pathSegments.at(-1) ?? location.href,
-    });
+    openViewerTab(tab);
     navigateDesktop('/', { replace: true });
   }, [location.href, location.routeKey, openViewerTab]);
 
@@ -111,7 +217,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
         gridTemplateRows: `${DESKTOP_TAB_BAR_HEIGHT}px minmax(0, 1fr)`,
       }}
     >
-      <div className="border-border-opaque flex min-w-0 items-end gap-1 overflow-x-auto border-b px-2 pt-1">
+      <div className="select-none flex min-w-0 items-end overflow-x-auto border-b border-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[12px] leading-none">
         <HomeTabButton
           active={activeTabId === DESKTOP_HOME_TAB_ID}
           onClick={() => selectTab(DESKTOP_HOME_TAB_ID)}
@@ -120,7 +226,11 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
           <TabButton
             active={activeTabId === tab.id}
             key={tab.id}
-            label={tab.title}
+            label={
+              tab.type === 'pr'
+                ? getPrTabLabel(tab)
+                : tab.id
+            }
             onClick={() => selectTab(tab.id)}
             onClose={() => closeTab(tab.id)}
           />
@@ -148,8 +258,8 @@ function HomeTabButton({
       aria-label="Home"
       className={
         active
-          ? 'bg-background border-border text-foreground flex h-8 w-9 shrink-0 items-center justify-center rounded-t-md border border-b-0'
-          : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground flex h-8 w-9 shrink-0 items-center justify-center rounded-t-md transition-colors'
+          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--color-primary)] after:content-[""]'
+          : 'flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
       }
       onClick={onClick}
     >
@@ -170,29 +280,29 @@ function TabButton({
   onClose?: () => void;
 }) {
   return (
-    <div
-      className={
-        active
-          ? 'bg-background border-border flex h-8 min-w-36 max-w-56 items-center gap-1 rounded-t-md border border-b-0 px-2 text-sm'
-          : 'hover:bg-accent/60 text-muted-foreground flex h-8 min-w-36 max-w-56 items-center gap-1 rounded-t-md px-2 text-sm transition-colors'
-      }
-    >
-      <button
-        type="button"
-        className="min-w-0 flex-1 truncate text-left"
-        onClick={onClick}
+      <div
+        className={
+          active
+            ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--color-primary)] after:content-[""]'
+            : 'hover:bg-[var(--color-accent)] flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border)] hover:text-[var(--color-foreground)]'
+        }
       >
-        {label}
-      </button>
-      {onClose != null && (
         <button
           type="button"
-          aria-label={`Close ${label}`}
-          className="hover:bg-accent flex size-5 shrink-0 items-center justify-center rounded-sm"
-          onClick={onClose}
+          className="min-w-0 flex-1 truncate text-left"
+          onClick={onClick}
         >
-          <TabCloseIcon />
+          {label}
         </button>
+        {onClose != null && (
+          <button
+            type="button"
+            aria-label={`Close ${label}`}
+            className="flex size-5 shrink-0 items-center justify-center text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
+            onClick={onClose}
+          >
+            <TabCloseIcon />
+          </button>
       )}
     </div>
   );
@@ -245,6 +355,8 @@ function DesktopViewer({ location }: { location: DesktopLocation }) {
     <div className="flex h-dvh flex-col gap-2">
       <ReviewUI
         key={location.routeKey}
+        desktopPrOwnerAvatarUrl={location.prViewerAvatarUrl}
+        desktopPrTitle={location.prTitle}
         domain={route.domain}
         initialUrl={route.url}
         path={route.upstreamPath}
@@ -286,11 +398,43 @@ function parseDesktopHref(href: string): DesktopLocation {
     .filter(Boolean)
     .map((segment) => decodeURIComponent(segment));
   const domain = url.searchParams.get('domain') ?? undefined;
+  const prViewerAvatarUrl =
+    url.searchParams.get('asahi-pr-viewer-avatar') ?? undefined;
+  const prTitle = url.searchParams.get('asahi-pr-title') ?? undefined;
   return {
     domain,
+    prViewerAvatarUrl,
+    prTitle,
     href: `${url.pathname}${url.search}`,
     pathSegments,
     routeKey: `${url.pathname}?${url.searchParams.toString()}`,
     tabContent: url.searchParams.get('asahi-tab-content') === '1',
+  };
+}
+
+function parseDesktopViewerTab(
+  href: string
+): DesktopViewerTabRequest | null {
+  const url = new URL(href, 'https://desktop.local');
+  const pullTabMatch = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(
+    url.pathname
+  );
+  if (pullTabMatch == null) return null;
+  const prTitle = url.searchParams.get('asahi-pr-title') ?? undefined;
+  const viewerAvatarUrl =
+    url.searchParams.get('asahi-pr-viewer-avatar') ?? undefined;
+
+  const request: DesktopViewerPrTabRequest = {
+    type: 'pr',
+    owner: pullTabMatch[1],
+    repo: pullTabMatch[2],
+    number: Number(pullTabMatch[3]),
+    viewerAvatarUrl,
+  };
+
+  return {
+    id: getViewerTabPath(request),
+    ...request,
+    ...(prTitle == null ? {} : { title: prTitle }),
   };
 }

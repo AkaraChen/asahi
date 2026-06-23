@@ -37,20 +37,40 @@ import { upsertSavedCommentSidebarEntry } from '../lib/upsertSavedCommentSidebar
 interface ReviewUIProps {
   domain?: string;
   initialUrl: string;
+  desktopPrOwnerAvatarUrl?: string;
+  desktopPrTitle?: string;
   path: string;
 }
 
-export function ReviewUI({ domain, initialUrl, path }: ReviewUIProps) {
+export function ReviewUI({
+  domain,
+  initialUrl,
+  desktopPrOwnerAvatarUrl,
+  desktopPrTitle,
+  path,
+}: ReviewUIProps) {
   // Provide the diffshub-scoped theme context, then render the body BELOW it so
   // the diffs hook + selection hook can read the controller context.
   return (
     <ThemeSourceProvider controller={themeController}>
-      <ReviewUIInner domain={domain} initialUrl={initialUrl} path={path} />
+      <ReviewUIInner
+        domain={domain}
+        desktopPrOwnerAvatarUrl={desktopPrOwnerAvatarUrl}
+        desktopPrTitle={desktopPrTitle}
+        initialUrl={initialUrl}
+        path={path}
+      />
     </ThemeSourceProvider>
   );
 }
 
-function ReviewUIInner({ domain, initialUrl, path }: ReviewUIProps) {
+function ReviewUIInner({
+  domain,
+  initialUrl,
+  desktopPrOwnerAvatarUrl,
+  desktopPrTitle,
+  path,
+}: ReviewUIProps) {
   useEffect(preloadAvatars, []);
 
   const isWorkerPoolReadyOrDisable = useIsWorkerPoolReadyOrDisabled();
@@ -237,6 +257,7 @@ function ReviewUIInner({ domain, initialUrl, path }: ReviewUIProps) {
       <DiffsHubHeader
         className="[grid-area:header]"
         collapseMode={collapseMode}
+        desktopPrTitle={desktopPrTitle}
         colorMode={colorMode}
         darkThemeName={darkThemeName}
         debugMode={debugMode}
@@ -266,6 +287,7 @@ function ReviewUIInner({ domain, initialUrl, path }: ReviewUIProps) {
           <DiffsHubSidebar
             className="[grid-area:viewer] md:[grid-area:tree]"
             commentSections={commentSections}
+            defaultCommentAuthorAvatarUrl={desktopPrOwnerAvatarUrl}
             debugMode={debugMode}
             diffStats={diffStats}
             mobileOverlayOpen={fileTreeOverlayOpen}
@@ -281,6 +303,7 @@ function ReviewUIInner({ domain, initialUrl, path }: ReviewUIProps) {
             key={viewerKey}
             className="[grid-area:viewer]"
             diffStyle={diffStyle}
+            defaultCommentAuthorAvatarUrl={desktopPrOwnerAvatarUrl}
             overflow={overflow}
             showBackgrounds={showBackgrounds}
             diffIndicators={diffIndicators}

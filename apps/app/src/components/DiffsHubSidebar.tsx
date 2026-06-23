@@ -60,6 +60,7 @@ const MOBILE_MEDIA_QUERY = '(max-width: 767px)';
 interface DiffsHubSidebarProps {
   className?: string;
   commentSections: readonly DiffsHubSavedCommentItem[];
+  defaultCommentAuthorAvatarUrl?: string;
   debugMode: boolean;
   diffStats: DiffsHubDiffStatsData | null;
   mobileOverlayOpen?: boolean;
@@ -75,6 +76,7 @@ interface DiffsHubSidebarProps {
 export const DiffsHubSidebar = memo(function DiffsHubSidebar({
   className,
   commentSections,
+  defaultCommentAuthorAvatarUrl,
   debugMode,
   diffStats,
   mobileOverlayOpen = false,
@@ -302,6 +304,7 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
           >
             <DiffsHubCommentsList
               commentSections={commentSections}
+              defaultCommentAuthorAvatarUrl={defaultCommentAuthorAvatarUrl}
               onSelectComment={onSelectComment}
               onSelectItem={onSelectItem}
             />

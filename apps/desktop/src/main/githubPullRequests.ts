@@ -21,6 +21,9 @@ const PULL_REQUEST_FETCH_CONCURRENCY = 4;
 
 const PULL_REQUESTS_QUERY = `
   query($owner: String!, $name: String!, $after: String) {
+    viewer {
+      avatarUrl
+    }
     repository(owner: $owner, name: $name) {
       nameWithOwner
       viewerPermission
@@ -203,6 +206,7 @@ async function loadPullRequestsForRepository(
   for (;;) {
     const response = await graphql<{
       data: {
+        viewer: { avatarUrl: string } | null;
         repository: {
           nameWithOwner: string;
           viewerPermission: GitHubPermission;
@@ -227,6 +231,7 @@ async function loadPullRequestsForRepository(
         toDesktopPullRequest(
           pullRequest,
           remoteRepository.nameWithOwner,
+          response.data.viewer?.avatarUrl,
           remoteRepository.viewerPermission as DesktopRepositoryPermission
         )
       )
@@ -268,6 +273,7 @@ export function toDesktopRepository(
 export function toDesktopPullRequest(
   pullRequest: PullRequestNode,
   repository: string,
+  viewerAvatarUrl: string | undefined,
   viewerPermission: DesktopRepositoryPermission
 ): DesktopPullRequest {
   const [owner, repo] = repository.split('/');
@@ -277,6 +283,7 @@ export function toDesktopPullRequest(
     owner,
     repo,
     repository,
+    viewerAvatarUrl,
     viewerPath: `/${owner}/${repo}/pull/${pullRequest.number}`,
     viewerPermission,
   };

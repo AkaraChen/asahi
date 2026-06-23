@@ -3,12 +3,27 @@ export const DESKTOP_SELECT_TAB_CHANNEL = 'asahi:select-tab';
 export const DESKTOP_CLOSE_VIEWER_TAB_CHANNEL = 'asahi:close-viewer-tab';
 
 export const DESKTOP_HOME_TAB_ID = 'home';
-export const DESKTOP_TAB_BAR_HEIGHT = 40;
+export const DESKTOP_TAB_BAR_HEIGHT = 36;
 
-export interface DesktopViewerTabRequest {
+export interface DesktopViewerPrTabRequest {
   id: string;
-  path: string;
-  title: string;
+  type: 'pr';
+  owner: string;
+  repo: string;
+  number: number;
+  title?: string;
+  viewerAvatarUrl?: string;
+}
+
+export type DesktopViewerTabRequest = DesktopViewerPrTabRequest;
+
+export function getViewerTabPath(tab: DesktopViewerTabRequest): string {
+  switch (tab.type) {
+    case 'pr':
+      return `/${tab.owner}/${tab.repo}/pull/${tab.number}`;
+    default:
+      throw new Error(`Unsupported tab type: ${tab.type}`);
+  }
 }
 
 export interface DesktopSelectTabRequest {

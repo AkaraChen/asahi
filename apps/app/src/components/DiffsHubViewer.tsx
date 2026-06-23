@@ -66,6 +66,7 @@ interface DiffsHubViewerProps {
   diffStyle: 'split' | 'unified';
   onCommentDeleted(comment: DiffsHubDeletedCommentEvent): void;
   onCommentSaved(comment: DiffsHubSavedCommentEvent): void;
+  defaultCommentAuthorAvatarUrl?: string;
   overflow: 'wrap' | 'scroll';
   showBackgrounds: boolean;
   diffIndicators: DiffIndicators;
@@ -83,6 +84,7 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
   diffStyle,
   onCommentDeleted,
   onCommentSaved,
+  defaultCommentAuthorAvatarUrl,
   overflow,
   showBackgrounds,
   diffIndicators,
@@ -247,7 +249,13 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
   );
 
   const handleSaveDraftComment = useStableCallback(
-    (itemId: string, key: string, message: string, author: AvatarName) => {
+    (
+      itemId: string,
+      key: string,
+      message: string,
+      author: AvatarName,
+      authorAvatarUrl?: string
+    ) => {
       const trimmedMessage = message.trim();
       const { current: viewer } = viewerRef;
       if (trimmedMessage.length === 0 || viewer == null) {
@@ -280,12 +288,13 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
               return annotation;
             }
 
-            return {
+        return {
               ...annotation,
               metadata: {
                 kind: 'saved',
                 key,
                 author,
+                avatarUrl: authorAvatarUrl,
                 message: trimmedMessage,
                 range: annotation.metadata.range,
               },
@@ -321,6 +330,7 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
       onLineLinkChange(null);
       onCommentSaved({
         author,
+        avatarUrl: authorAvatarUrl,
         itemId,
         key,
         lineNumber: draftAnnotation.lineNumber,
@@ -381,6 +391,7 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
             itemId={item.id}
             onCancel={handleRemoveComment}
             onSave={handleSaveDraftComment}
+            authorAvatarUrl={defaultCommentAuthorAvatarUrl}
           />
         );
       }
@@ -395,6 +406,7 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
           itemId={item.id}
           onDelete={handleRemoveComment}
           onToggleSelection={handleToggleCommentSelection}
+          authorAvatarUrl={defaultCommentAuthorAvatarUrl}
         />
       );
     }

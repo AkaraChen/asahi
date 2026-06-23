@@ -29,6 +29,7 @@ import {
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
   DESKTOP_SELECT_TAB_CHANNEL,
   DESKTOP_TAB_BAR_HEIGHT,
+  getViewerTabPath,
 } from '../shared/desktopTabs';
 import type {
   DesktopSelectTabRequest,
@@ -105,7 +106,17 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
     void shell.openExternal(url);
     return { action: 'deny' };
   });
-  void view.webContents.loadURL(getRendererTabUrl(request.path));
+  const search = new URLSearchParams();
+  if (request.title != null && request.title.trim() !== '') {
+    search.set('asahi-pr-title', request.title);
+  }
+  if (request.viewerAvatarUrl != null && request.viewerAvatarUrl.trim() !== '') {
+    search.set('asahi-pr-viewer-avatar', request.viewerAvatarUrl);
+  }
+  const path = `${getViewerTabPath(request)}${
+    search.size > 0 ? `?${search.toString()}` : ''
+  }`;
+  void view.webContents.loadURL(getRendererTabUrl(path));
   return view;
 }
 

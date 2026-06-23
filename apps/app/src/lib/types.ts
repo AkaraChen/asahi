@@ -17,6 +17,7 @@ export interface SavedCommentMetadata {
   kind: 'saved';
   key: string;
   author: string;
+  avatarUrl?: string;
   message: string;
   range: SelectedLineRange;
 }
@@ -47,6 +48,7 @@ export type CommentLineType = 'change' | 'context';
 
 export interface DiffsHubSavedCommentEvent {
   author: string;
+  avatarUrl?: string;
   itemId: string;
   key: string;
   lineNumber: number;
@@ -63,6 +65,7 @@ export interface DiffsHubDeletedCommentEvent {
 
 export interface DiffsHubSavedCommentEntry {
   author: string;
+  avatarUrl?: string;
   itemId: string;
   key: string;
   lineNumber: number;

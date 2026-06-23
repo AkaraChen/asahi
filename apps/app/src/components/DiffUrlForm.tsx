@@ -19,6 +19,7 @@ import { getPatchViewerHref } from '../lib/getPatchViewerHref';
 
 interface DiffUrlFormProps {
   className?: string;
+  desktopPrTitle?: string;
   // When provided, the input restores to this value on blur or Escape. Also
   // controls the clear-button visibility: with an initialUrl set, the clear
   // button only shows when the input matches the committed URL or has an error
@@ -42,11 +43,13 @@ interface DiffUrlFormProps {
 export function DiffUrlForm({
   className,
   initialUrl = '',
+  desktopPrTitle,
   inputClassName,
   onUrlChange,
   placeholder,
   children,
 }: DiffUrlFormProps) {
+  const isPrTitleMode = desktopPrTitle != null && desktopPrTitle.length > 0;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [url, setURL] = useState(initialUrl);
@@ -93,6 +96,9 @@ export function DiffUrlForm({
   const handleSubmit = useStableCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      if (isPrTitleMode) {
+        return;
+      }
       isSubmittingRef.current = false;
       const normalizedURL = url.trim();
       const viewerHref = getPatchViewerHref(normalizedURL);
@@ -133,14 +139,21 @@ export function DiffUrlForm({
           'focus:text-primary block field-sizing-content h-9 min-w-[24ch] rounded-md text-sm focus-visible:outline-none',
           inputClassName
         )}
-        enterKeyHint="go"
-        value={url}
-        type="url"
+        enterKeyHint={isPrTitleMode ? undefined : 'go'}
+        value={isPrTitleMode ? desktopPrTitle : url}
+        type={isPrTitleMode ? 'text' : 'url'}
+        readOnly={isPrTitleMode}
         onChange={({ currentTarget }) => {
+          if (isPrTitleMode) {
+            return;
+          }
           setURL(currentTarget.value);
           if (validationError) setValidationError(null);
         }}
         onBlur={() => {
+          if (isPrTitleMode) {
+            return;
+          }
           if (isSubmittingRef.current) return;
           // Only restore the committed URL when the field is empty — if the
           // user typed something and clicked away, keep their draft.
@@ -150,6 +163,9 @@ export function DiffUrlForm({
           }
         }}
         onKeyDown={(e) => {
+          if (isPrTitleMode) {
+            return;
+          }
           if (e.key === 'Escape') {
             setURL(initialUrl);
             setValidationError(null);
@@ -160,7 +176,7 @@ export function DiffUrlForm({
         }}
         placeholder={placeholder}
       />
-      {showClear && (
+      {!isPrTitleMode && showClear && (
         <Button
           type="button"
           variant="ghost"
@@ -176,7 +192,7 @@ export function DiffUrlForm({
           <IconX className="size-4" />
         </Button>
       )}
-      {children?.(isPending, url)}
+      {!isPrTitleMode && children?.(isPending, url)}
       {/* Hidden submit ensures Enter triggers form submission in all browsers */}
       <button type="submit" hidden />
       {errorAnchor !== null &&

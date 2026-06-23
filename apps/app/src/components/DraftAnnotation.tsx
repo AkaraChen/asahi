@@ -20,8 +20,10 @@ interface DraftAnnotationProps {
     itemId: string,
     key: string,
     message: string,
-    author: AvatarName
+    author: AvatarName,
+    authorAvatarUrl?: string
   ): void;
+  authorAvatarUrl?: string;
 }
 
 export function DraftAnnotation({
@@ -29,6 +31,7 @@ export function DraftAnnotation({
   itemId,
   onCancel,
   onSave,
+  authorAvatarUrl,
 }: DraftAnnotationProps) {
   const [message, setMessage] = useState(annotation.metadata.message);
   const [persona] = useState(getRandomPersona);
@@ -39,7 +42,13 @@ export function DraftAnnotation({
     if (trimmedMessage.length === 0) {
       return;
     }
-    onSave(itemId, annotation.metadata.key, trimmedMessage, persona.name);
+    onSave(
+      itemId,
+      annotation.metadata.key,
+      trimmedMessage,
+      persona.name,
+      authorAvatarUrl
+    );
   }
 
   function tryCancel() {
@@ -69,7 +78,7 @@ export function DraftAnnotation({
       }}
     >
       <div className="flex w-full gap-2.5">
-        <CommentAuthorAvatar seed={persona.name} />
+        <CommentAuthorAvatar seed={persona.name} avatarSrc={authorAvatarUrl} />
         <textarea
           ref={textareaRef}
           value={message}

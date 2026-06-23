@@ -467,8 +467,12 @@ function PullRequestRow({
       onClick={() =>
         onOpenViewerTab({
           id: item.viewerPath,
-          path: item.viewerPath,
-          title: `${item.repo} #${item.number}`,
+          title: item.title,
+          type: 'pr',
+          viewerAvatarUrl: item.viewerAvatarUrl,
+          owner: item.owner,
+          repo: item.repo,
+          number: item.number,
         })
       }
     >
@@ -630,10 +634,27 @@ function formatDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  const diffMs = Date.now() - date.getTime();
+
+  const seconds = Math.max(0, Math.round(diffMs / 1000));
+  const minutes = Math.max(0, Math.round(seconds / 60));
+  const hours = Math.max(0, Math.round(minutes / 60));
+  const days = Math.max(0, Math.round(hours / 24));
+  const months = Math.max(0, Math.round(days / 30));
+  const years = Math.max(0, Math.round(days / 365));
+
+  if (seconds < 5) return 'just now';
+
+  const formatter = new Intl.RelativeTimeFormat(undefined, {
+    numeric: 'auto',
+  });
+
+  if (seconds < 60) return formatter.format(-seconds, 'second');
+  if (minutes < 60) return formatter.format(-minutes, 'minute');
+  if (hours < 24) return formatter.format(-hours, 'hour');
+  if (days < 30) return formatter.format(-days, 'day');
+  if (months < 12) return formatter.format(-months, 'month');
+  return formatter.format(-years, 'year');
 }
 
 function PlusIcon() {

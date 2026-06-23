@@ -14,6 +14,7 @@ import type {
 
 interface DiffsHubCommentsListProps {
   commentSections: readonly DiffsHubSavedCommentItem[];
+  defaultCommentAuthorAvatarUrl?: string;
   onSelectComment?(comment: DiffsHubSavedCommentEntry): void;
   onSelectItem?(itemId: string): void;
 }
@@ -79,6 +80,7 @@ function handleRowClick(
 
 export const DiffsHubCommentsList = memo(function DiffsHubCommentsList({
   commentSections,
+  defaultCommentAuthorAvatarUrl,
   onSelectComment,
   onSelectItem,
 }: DiffsHubCommentsListProps) {
@@ -146,7 +148,11 @@ export const DiffsHubCommentsList = memo(function DiffsHubCommentsList({
                   handleRowClick(event, () => onSelectComment?.(comment))
                 }
               >
-                <CommentAuthorAvatar seed={comment.author} className="size-5" />
+                <CommentAuthorAvatar
+                  seed={comment.author}
+                  avatarSrc={comment.avatarUrl ?? defaultCommentAuthorAvatarUrl}
+                  className="size-5"
+                />
                 <div className="flex flex-col items-start gap-0.5 select-text">
                   <div className="text-muted-foreground flex gap-1">
                     {comment.author} commented on{' '}
