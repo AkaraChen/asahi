@@ -143,16 +143,32 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
     [prQueryByRepo]
   );
 
+  const getPrTabViewerBody = useCallback(
+    (tab: DesktopViewerPrTabRequest) => {
+      const query = prQueryByRepo.get(`${tab.owner}/${tab.repo}`);
+      return (
+        query?.data?.find(
+          (item: DesktopPullRequest) =>
+            item.number === tab.number &&
+            item.owner === tab.owner &&
+            item.repo === tab.repo
+        )?.bodyHTML ?? tab.body
+      );
+    },
+    [prQueryByRepo]
+  );
+
   const openViewerTab = useCallback(
     (tab: DesktopViewerTabRequest) => {
       const nextTab: DesktopViewerTabRequest =
         tab.type === 'pr' &&
-        (tab.title == null || tab.viewerAvatarUrl == null)
+        (tab.title == null || tab.viewerAvatarUrl == null || tab.body == null)
           ? {
               ...tab,
               title: tab.title ?? getPrTabLabel(tab),
               viewerAvatarUrl:
                 tab.viewerAvatarUrl ?? getPrTabViewerAvatarUrl(tab),
+              body: tab.body ?? getPrTabViewerBody(tab),
             }
           : tab;
 
@@ -164,6 +180,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
                     ...item,
                     viewerAvatarUrl:
                       nextTab.viewerAvatarUrl ?? item.viewerAvatarUrl,
+                    body: nextTab.body ?? item.body,
                     title: nextTab.title,
                   }
                 : item
@@ -173,7 +190,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
       setActiveTabId(nextTab.id);
       void window.asahi.openViewerTab(nextTab);
     },
-    [getPrTabLabel, getPrTabViewerAvatarUrl]
+    [getPrTabLabel, getPrTabViewerAvatarUrl, getPrTabViewerBody]
   );
 
   useEffect(() => {
@@ -340,12 +357,44 @@ function DesktopViewer({ location }: { location: DesktopLocation }) {
     () => resolveDiffshubViewerRoute(location.pathSegments, location.domain),
     [location.domain, location.pathSegments]
   );
+  const tabRequestId = useMemo(
+    () => getDesktopViewerTabId(location.pathSegments),
+    [location.pathSegments]
+  );
+  const [viewerTabRequest, setViewerTabRequest] =
+    useState<DesktopViewerTabRequest | null>(null);
 
   useEffect(() => {
     if (route.kind === 'redirect') {
       navigateDesktop(route.target, { replace: true });
     }
   }, [route]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (tabRequestId == null) {
+      setViewerTabRequest(null);
+      return;
+    }
+
+    void window.asahi
+      .getViewerTabRequest(tabRequestId)
+      .then((request) => {
+        if (!cancelled) {
+          setViewerTabRequest(request);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setViewerTabRequest(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tabRequestId]);
 
   if (route.kind === 'redirect') {
     return null;
@@ -356,6 +405,7 @@ function DesktopViewer({ location }: { location: DesktopLocation }) {
       <ReviewUI
         key={location.routeKey}
         desktopPrOwnerAvatarUrl={location.prViewerAvatarUrl}
+        desktopPrBody={viewerTabRequest?.body}
         desktopPrTitle={location.prTitle}
         domain={route.domain}
         initialUrl={route.url}
@@ -437,4 +487,18 @@ function parseDesktopViewerTab(
     ...request,
     ...(prTitle == null ? {} : { title: prTitle }),
   };
+}
+
+function getDesktopViewerTabId(
+  pathSegments: string[]
+): string | null {
+  if (pathSegments.length < 4) return null;
+
+  const [owner, repo, resourceType, numberText] = pathSegments;
+  if (resourceType !== 'pull') return null;
+
+  const number = Number(numberText);
+  if (Number.isNaN(number)) return null;
+
+  return `/${owner}/${repo}/pull/${number}`;
 }

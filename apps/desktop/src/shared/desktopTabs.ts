@@ -1,4 +1,6 @@
 export const DESKTOP_OPEN_VIEWER_TAB_CHANNEL = 'asahi:open-viewer-tab';
+export const DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL =
+  'asahi:get-viewer-tab-request';
 export const DESKTOP_SELECT_TAB_CHANNEL = 'asahi:select-tab';
 export const DESKTOP_CLOSE_VIEWER_TAB_CHANNEL = 'asahi:close-viewer-tab';
 
@@ -11,6 +13,7 @@ export interface DesktopViewerPrTabRequest {
   owner: string;
   repo: string;
   number: number;
+  body?: string;
   title?: string;
   viewerAvatarUrl?: string;
 }

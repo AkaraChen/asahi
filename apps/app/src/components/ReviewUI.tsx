@@ -5,6 +5,7 @@ import { type CodeViewHandle, useWorkerPool } from '@pierre/diffs/react';
 import { type ColorMode } from '@pierre/theming';
 import { useThemeController } from '@pierre/theming/react';
 import {
+  type CSSProperties,
   type ReactNode,
   useCallback,
   useEffect,
@@ -38,14 +39,20 @@ interface ReviewUIProps {
   domain?: string;
   initialUrl: string;
   desktopPrOwnerAvatarUrl?: string;
+  desktopPrBody?: string;
   desktopPrTitle?: string;
   path: string;
 }
+
+const DEFAULT_SIDEBAR_WIDTH = 320;
+const SIDEBAR_MIN_WIDTH = 240;
+const SIDEBAR_MAX_WIDTH = 720;
 
 export function ReviewUI({
   domain,
   initialUrl,
   desktopPrOwnerAvatarUrl,
+  desktopPrBody,
   desktopPrTitle,
   path,
 }: ReviewUIProps) {
@@ -56,6 +63,7 @@ export function ReviewUI({
       <ReviewUIInner
         domain={domain}
         desktopPrOwnerAvatarUrl={desktopPrOwnerAvatarUrl}
+        desktopPrBody={desktopPrBody}
         desktopPrTitle={desktopPrTitle}
         initialUrl={initialUrl}
         path={path}
@@ -68,6 +76,7 @@ function ReviewUIInner({
   domain,
   initialUrl,
   desktopPrOwnerAvatarUrl,
+  desktopPrBody,
   desktopPrTitle,
   path,
 }: ReviewUIProps) {
@@ -84,6 +93,7 @@ function ReviewUIInner({
   const [diffIndicators, setDiffIndicators] = useState<DiffIndicators>('bars');
   const [lineNumbers, setLineNumbers] = useState(true);
   const [debugMode, setDebugMode] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   // All theming state — color mode and the light/dark theme-name picks — lives
   // in the single @pierre/theming controller (the same instance the app-wide
   // ThemeProvider is bound to). Reading it here means picking Auto/Light/Dark
@@ -223,6 +233,26 @@ function ReviewUIInner({
   const handleCloseFileTreeOverlay = useCallback(() => {
     setFileTreeOverlayOpen(false);
   }, []);
+  const handleSidebarResizeStart = useCallback(
+    (startX: number, startWidth: number) => {
+      const onPointerMove = (event: PointerEvent) => {
+        const nextWidth = Math.min(
+          SIDEBAR_MAX_WIDTH,
+          Math.max(SIDEBAR_MIN_WIDTH, startWidth + (event.clientX - startX))
+        );
+        setSidebarWidth(nextWidth);
+      };
+      const cleanup = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', cleanup);
+        window.removeEventListener('pointercancel', cleanup);
+      };
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', cleanup);
+      window.addEventListener('pointercancel', cleanup);
+    },
+    []
+  );
   const handleSelectComment = useCallback(
     (comment: DiffsHubSavedCommentEntry) => {
       setFileTreeOverlayOpen(false);
@@ -253,7 +283,7 @@ function ReviewUIInner({
       (loadState === 'streaming' && initialItems.length > 0));
 
   return (
-    <ReviewGrid>
+    <ReviewGrid sidebarWidth={sidebarWidth}>
       <DiffsHubHeader
         className="[grid-area:header]"
         collapseMode={collapseMode}
@@ -288,8 +318,11 @@ function ReviewUIInner({
             className="[grid-area:viewer] md:[grid-area:tree]"
             commentSections={commentSections}
             defaultCommentAuthorAvatarUrl={desktopPrOwnerAvatarUrl}
+            desktopPrBody={desktopPrBody}
             debugMode={debugMode}
             diffStats={diffStats}
+            sidebarWidth={sidebarWidth}
+            onSidebarResizeStart={handleSidebarResizeStart}
             mobileOverlayOpen={fileTreeOverlayOpen}
             onMobileClose={handleCloseFileTreeOverlay}
             onSelectComment={handleSelectComment}
@@ -351,11 +384,15 @@ function useIsWorkerPoolReadyOrDisabled() {
 
 interface ReviewGridProps {
   children: ReactNode;
+  sidebarWidth?: number;
 }
 
-function ReviewGrid({ children }: ReviewGridProps) {
+function ReviewGrid({ children, sidebarWidth = DEFAULT_SIDEBAR_WIDTH }: ReviewGridProps) {
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-contain contain-strict [grid-template-areas:'header''viewer'] md:grid-cols-[320px_minmax(0,1fr)] md:[grid-template-areas:'header_header''tree_viewer']">
+    <div
+      className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-contain contain-strict [grid-template-areas:'header''viewer'] md:grid-cols-[var(--asahi-sidebar-width)_minmax(0,1fr)] md:[grid-template-areas:'header_header''tree_viewer']"
+      style={{ '--asahi-sidebar-width': `${sidebarWidth}px` } as CSSProperties}
+    >
       {children}
     </div>
   );

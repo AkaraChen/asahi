@@ -40,6 +40,7 @@ const PULL_REQUESTS_QUERY = `
           mergeStateStatus
           number
           reviewDecision
+          bodyHTML
           title
           updatedAt
           url

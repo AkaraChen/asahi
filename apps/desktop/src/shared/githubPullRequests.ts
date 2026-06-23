@@ -43,6 +43,7 @@ export interface DesktopPullRequest {
   repository: string;
   owner: string;
   repo: string;
+  bodyHTML?: string;
   viewerAvatarUrl?: string;
   number: number;
   url: string;

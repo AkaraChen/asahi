@@ -27,6 +27,7 @@ import {
   DESKTOP_CLOSE_VIEWER_TAB_CHANNEL,
   DESKTOP_HOME_TAB_ID,
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
+  DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL,
   DESKTOP_SELECT_TAB_CHANNEL,
   DESKTOP_TAB_BAR_HEIGHT,
   getViewerTabPath,
@@ -40,6 +41,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const diffApiAccessToken = randomBytes(32).toString('base64url');
 let diffServerPromise: Promise<DiffApiServer> | undefined;
 const viewerTabs = new Map<string, WebContentsView>();
+const viewerTabRequests = new Map<string, DesktopViewerTabRequest>();
 let mainWindow: BrowserWindow | undefined;
 let activeTabId = DESKTOP_HOME_TAB_ID;
 
@@ -74,6 +76,7 @@ function createMainWindow(): void {
   mainWindow.on('resize', layoutActiveViewerTab);
   mainWindow.on('closed', () => {
     viewerTabs.clear();
+    viewerTabRequests.clear();
     mainWindow = undefined;
     activeTabId = DESKTOP_HOME_TAB_ID;
   });
@@ -88,6 +91,7 @@ function createMainWindow(): void {
 }
 
 function openViewerTab(request: DesktopViewerTabRequest): void {
+  viewerTabRequests.set(request.id, request);
   const tab = viewerTabs.get(request.id) ?? createViewerTab(request);
   viewerTabs.set(request.id, tab);
   selectTab(request.id);
@@ -144,6 +148,7 @@ function closeViewerTab(id: string): void {
     window.contentView.removeChildView(view);
   }
   viewerTabs.delete(id);
+  viewerTabRequests.delete(id);
   if (activeTabId === id) {
     activeTabId = DESKTOP_HOME_TAB_ID;
   }
@@ -204,6 +209,11 @@ ipcMain.handle(
 ipcMain.handle(
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
   (_event, request: DesktopViewerTabRequest) => openViewerTab(request)
+);
+
+ipcMain.handle(
+  DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL,
+  (_event, id: string) => viewerTabRequests.get(id) ?? null
 );
 
 ipcMain.handle(

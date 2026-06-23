@@ -25,6 +25,9 @@ declare global {
       listRepositoryPullRequests(
         request: DesktopListPullRequestsRequest
       ): Promise<DesktopPullRequestResult>;
+      getViewerTabRequest(
+        id: string
+      ): Promise<DesktopViewerTabRequest | null>;
       openViewerTab(request: DesktopViewerTabRequest): Promise<void>;
       selectDesktopTab(request: DesktopSelectTabRequest): Promise<void>;
     };

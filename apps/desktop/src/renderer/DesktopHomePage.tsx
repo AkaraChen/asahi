@@ -467,6 +467,7 @@ function PullRequestRow({
       onClick={() =>
         onOpenViewerTab({
           id: item.viewerPath,
+          body: item.bodyHTML,
           title: item.title,
           type: 'pr',
           viewerAvatarUrl: item.viewerAvatarUrl,

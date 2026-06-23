@@ -63,7 +63,10 @@ interface DiffsHubSidebarProps {
   defaultCommentAuthorAvatarUrl?: string;
   debugMode: boolean;
   diffStats: DiffsHubDiffStatsData | null;
+  desktopPrBody?: string;
+  sidebarWidth?: number;
   mobileOverlayOpen?: boolean;
+  onSidebarResizeStart?(startX: number, startWidth: number): void;
   onMobileClose(): void;
   onSelectComment(comment: DiffsHubSavedCommentEntry): void;
   onSelectItem(itemId: string): void;
@@ -79,6 +82,9 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
   defaultCommentAuthorAvatarUrl,
   debugMode,
   diffStats,
+  desktopPrBody,
+  sidebarWidth,
+  onSidebarResizeStart,
   mobileOverlayOpen = false,
   onMobileClose,
   onSelectComment,
@@ -214,6 +220,8 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
         className={className}
         mobileOverlayOpen={mobileOverlayOpen}
         themeStyle={sidebarStyle}
+        sidebarWidth={sidebarWidth}
+        onSidebarResizeStart={onSidebarResizeStart}
       >
         <div className="flex items-center gap-3 px-4 pt-5 pb-2 md:px-3 md:pt-0.5 md:pb-0">
           <ButtonGroup
@@ -242,19 +250,19 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
               <IconComment className="size-4 md:size-3" />
               <span className="sr-only">Comments</span>
               {totalCommentCount > 0 && (
-                <span
-                  aria-hidden="true"
-                  // Tint the badge with the chrome's current text color so
-                  // it follows the active Shiki theme instead of staying
-                  // on hardcoded neutral grays. `currentColor` resolves to
-                  // whichever fg the button inherits (chrome primaryFg
-                  // for the unselected ghost variant, accent-foreground
-                  // when this tab is selected), so the pill stays
-                  // on-palette in both states.
-                  className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[color-mix(in_srgb,currentColor_18%,transparent)] px-1 text-[10px] leading-none font-medium tabular-nums"
-                >
-                  {totalCommentCount}
-                </span>
+                <>
+                  {/* Tint the badge with the chrome's current text color so it follows the
+                  active Shiki theme instead of staying on hardcoded neutral grays.
+                  `currentColor` resolves to whichever fg the button inherits (chrome
+                  primaryFg for the unselected ghost variant, accent-foreground when
+                  this tab is selected), so the pill stays on-palette in both states. */}
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[color-mix(in_srgb,currentColor_18%,transparent)] px-1 text-[10px] leading-none font-medium tabular-nums"
+                  >
+                    {totalCommentCount}
+                  </span>
+                </>
               )}
             </ButtonGroupItem>
           </ButtonGroup>
@@ -283,6 +291,15 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
             </Button>
           )}
         </div>
+        {desktopPrBody != null && desktopPrBody.trim() !== '' && (
+          <section className="mx-3 mb-2 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-2 text-[12px] text-[var(--color-foreground)]">
+            <h2 className="mb-1 font-medium">PR body</h2>
+            <div
+              className="prose prose-sm max-h-40 min-h-0 overflow-auto text-[var(--color-foreground)] [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_p]:mb-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-[11px]
+              dangerouslySetInnerHTML={{ __html: desktopPrBody }}
+            />
+          </section>
+        )}
         <div className="mt-3 min-h-0 flex-1">
           <div
             role="region"
@@ -337,6 +354,8 @@ interface SidebarWrapperProps {
   children: ReactNode;
   className?: string;
   mobileOverlayOpen: boolean;
+  onSidebarResizeStart?(startX: number, startWidth: number): void;
+  sidebarWidth?: number;
   themeStyle?: CSSProperties;
 }
 
@@ -344,13 +363,15 @@ function SidebarWrapper({
   children,
   className,
   mobileOverlayOpen,
+  onSidebarResizeStart,
+  sidebarWidth,
   themeStyle,
 }: SidebarWrapperProps) {
   return (
     <div
       className={cn(
         className,
-        'contain-strict z-30 flex h-full min-h-0 flex-col transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform motion-reduce:transition-none md:z-auto md:translate-y-0 md:will-change-auto',
+        'relative contain-strict z-30 flex h-full min-h-0 flex-col transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform motion-reduce:transition-none md:z-auto md:translate-y-0 md:will-change-auto',
         // Fall back to the neutral diffshub chrome background when no Shiki
         // theme bg is available yet (initial render before the resolver
         // returns).
@@ -362,6 +383,19 @@ function SidebarWrapper({
       style={themeStyle}
     >
       {children}
+      {onSidebarResizeStart != null && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          className="pointer-events-auto absolute right-0 top-0 z-10 h-full w-3 cursor-col-resize select-none touch-none md:block hidden"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            onSidebarResizeStart(event.clientX, sidebarWidth ?? 320);
+          }}
+        >
+          <span className="pointer-events-none absolute inset-y-0 right-0 w-px bg-border/60" />
+        </div>
+      )}
     </div>
   );
 }
