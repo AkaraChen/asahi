@@ -250,19 +250,13 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
               <IconComment className="size-4 md:size-3" />
               <span className="sr-only">Comments</span>
               {totalCommentCount > 0 && (
-                <>
-                  {/* Tint the badge with the chrome's current text color so it follows the
-                  active Shiki theme instead of staying on hardcoded neutral grays.
-                  `currentColor` resolves to whichever fg the button inherits (chrome
-                  primaryFg for the unselected ghost variant, accent-foreground when
-                  this tab is selected), so the pill stays on-palette in both states. */}
-                  <span
-                    aria-hidden="true"
-                    className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[color-mix(in_srgb,currentColor_18%,transparent)] px-1 text-[10px] leading-none font-medium tabular-nums"
-                  >
-                    {totalCommentCount}
-                  </span>
-                </>
+                <span
+                  aria-hidden="true"
+                  title="Unread comment count"
+                  className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[color-mix(in_srgb,currentColor_18%,transparent)] px-1 text-[10px] leading-none font-medium tabular-nums"
+                >
+                  {totalCommentCount}
+                </span>
               )}
             </ButtonGroupItem>
           </ButtonGroup>
@@ -291,15 +285,15 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
             </Button>
           )}
         </div>
-        {desktopPrBody != null && desktopPrBody.trim() !== '' && (
+        {desktopPrBody != null && desktopPrBody.trim() !== '' ? (
           <section className="mx-3 mb-2 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-2 text-[12px] text-[var(--color-foreground)]">
             <h2 className="mb-1 font-medium">PR body</h2>
             <div
-              className="prose prose-sm max-h-40 min-h-0 overflow-auto text-[var(--color-foreground)] [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground [&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_p]:mb-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-[11px]
+              className="prose prose-sm max-h-40 min-h-0 overflow-auto text-[12px] text-[var(--color-foreground)]"
               dangerouslySetInnerHTML={{ __html: desktopPrBody }}
             />
           </section>
-        )}
+        ) : null}
         <div className="mt-3 min-h-0 flex-1">
           <div
             role="region"
