@@ -22,7 +22,7 @@ function createMainWindow(): void {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: join(currentDir, '../preload/index.js'),
+      preload: join(currentDir, '../preload/index.cjs'),
       sandbox: true,
     },
     width: 1440,
