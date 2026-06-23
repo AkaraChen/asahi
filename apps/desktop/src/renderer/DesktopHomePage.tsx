@@ -11,7 +11,7 @@ import type {
   DesktopRepository,
   DesktopSelectedRepository,
 } from '../shared/githubPullRequests';
-import { navigateDesktop } from './navigation';
+import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
 import Link from './next-link';
 
 const SELECTED_REPOSITORIES_KEY = 'asahi:selected-repositories';
@@ -19,7 +19,11 @@ const SELECTED_REPOSITORIES_KEY = 'asahi:selected-repositories';
 type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
 type UpdatedFilter = 'all' | '24h' | '7d' | '30d';
 
-export function DesktopHomePage() {
+export function DesktopHomePage({
+  onOpenViewerTab,
+}: {
+  onOpenViewerTab: (tab: DesktopViewerTabRequest) => void;
+}) {
   const [selectedRepositories, setSelectedRepositories] = useState<
     DesktopSelectedRepository[]
   >(readSelectedRepositories);
@@ -70,7 +74,7 @@ export function DesktopHomePage() {
   );
 
   return (
-    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
       <header className="border-border-opaque bg-[var(--diffshub-sidebar-bg)] z-10 flex flex-wrap items-center gap-2.5 border-b px-3 py-1.5 md:flex-nowrap">
         <Link
           href="/"
@@ -181,7 +185,10 @@ export function DesktopHomePage() {
             <ul className="divide-border h-full overflow-auto divide-y">
               {filteredItems.map((item) => (
                 <li key={item.id}>
-                  <PullRequestRow item={item} />
+                  <PullRequestRow
+                    item={item}
+                    onOpenViewerTab={onOpenViewerTab}
+                  />
                 </li>
               ))}
             </ul>
@@ -444,12 +451,24 @@ function RepositoryButton({
   );
 }
 
-function PullRequestRow({ item }: { item: DesktopPullRequest }) {
+function PullRequestRow({
+  item,
+  onOpenViewerTab,
+}: {
+  item: DesktopPullRequest;
+  onOpenViewerTab: (tab: DesktopViewerTabRequest) => void;
+}) {
   return (
     <button
       type="button"
       className="hover:bg-accent/60 focus-visible:ring-ring grid w-full grid-cols-[minmax(0,1fr)_auto] gap-4 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      onClick={() => navigateDesktop(item.viewerPath)}
+      onClick={() =>
+        onOpenViewerTab({
+          id: item.viewerPath,
+          path: item.viewerPath,
+          title: `${item.repo} #${item.number}`,
+        })
+      }
     >
       <span className="min-w-0">
         <span className="text-muted-foreground block truncate font-mono text-xs tracking-tight">

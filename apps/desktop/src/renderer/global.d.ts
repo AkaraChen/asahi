@@ -5,12 +5,17 @@ import type {
   DesktopRepositoriesResult,
   DesktopRepositoryOwnersResult,
 } from '../shared/githubPullRequests';
+import type {
+  DesktopSelectTabRequest,
+  DesktopViewerTabRequest,
+} from '../shared/desktopTabs';
 
 export {};
 
 declare global {
   interface Window {
     asahi: {
+      closeViewerTab(id: string): Promise<void>;
       getApiBaseURL(): Promise<string>;
       listOwnerRepositories(
         request: DesktopListOwnerRepositoriesRequest
@@ -19,6 +24,8 @@ declare global {
       listRepositoryPullRequests(
         request: DesktopListPullRequestsRequest
       ): Promise<DesktopPullRequestResult>;
+      openViewerTab(request: DesktopViewerTabRequest): Promise<void>;
+      selectDesktopTab(request: DesktopSelectTabRequest): Promise<void>;
     };
   }
 }
