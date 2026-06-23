@@ -8,6 +8,7 @@
     "build": "electron-vite build",
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
+    "test": "bun test test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@tanstack/react-query": "^5.101.0",
     "p-limit": "7.3.0",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "^4.4.3"
   }
 }

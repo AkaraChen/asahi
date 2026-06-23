@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export const LIST_REPOSITORY_OWNERS_CHANNEL =
   'asahi:list-repository-owners';
 export const LIST_OWNER_REPOSITORIES_CHANNEL =
@@ -29,11 +31,23 @@ export interface DesktopRepository {
   viewerPermission: DesktopRepositoryPermission;
 }
 
-export interface DesktopSelectedRepository {
-  owner: string;
-  name: string;
-  nameWithOwner: string;
-}
+const repositoryName = z.string().min(1);
+
+export const DesktopSelectedRepositorySchema = z
+  .object({
+    owner: repositoryName,
+    name: repositoryName,
+    nameWithOwner: repositoryName,
+  })
+  .refine(
+    (repository) =>
+      repository.nameWithOwner === `${repository.owner}/${repository.name}`,
+    { message: 'nameWithOwner must match owner/name' }
+  );
+
+export type DesktopSelectedRepository = z.infer<
+  typeof DesktopSelectedRepositorySchema
+>;
 
 export interface DesktopPullRequest {
   id: string;
@@ -53,14 +67,22 @@ export interface DesktopPullRequest {
   viewerPermission: DesktopRepositoryPermission;
 }
 
-export interface DesktopListOwnerRepositoriesRequest {
-  owner: string;
-  ownerType: DesktopRepositoryOwner['type'];
-}
+export const DesktopListOwnerRepositoriesRequestSchema = z.object({
+  owner: repositoryName,
+  ownerType: z.enum(['personal', 'organization']),
+});
 
-export interface DesktopListPullRequestsRequest {
-  repositories: DesktopSelectedRepository[];
-}
+export type DesktopListOwnerRepositoriesRequest = z.infer<
+  typeof DesktopListOwnerRepositoriesRequestSchema
+>;
+
+export const DesktopListPullRequestsRequestSchema = z.object({
+  repositories: z.array(DesktopSelectedRepositorySchema),
+});
+
+export type DesktopListPullRequestsRequest = z.infer<
+  typeof DesktopListPullRequestsRequestSchema
+>;
 
 export type DesktopGitHubFailure = {
   ok: false;

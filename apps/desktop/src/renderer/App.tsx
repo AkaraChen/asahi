@@ -17,7 +17,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DESKTOP_HOME_TAB_ID,
   DESKTOP_TAB_BAR_HEIGHT,
-  getViewerTabPath,
 } from '../shared/desktopTabs';
 import type {
   DesktopViewerPrTabRequest,
@@ -102,7 +101,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
   });
 
   const prQueryByRepo = useMemo(() => {
-    const map = new Map<string, ReturnType<typeof prQueries[number]>>();
+    const map = new Map<string, (typeof prQueries)[number]>();
     for (let i = 0; i < prRepoKeys.length; i += 1) {
       map.set(prRepoKeys[i], prQueries[i]);
     }
@@ -404,9 +403,11 @@ function DesktopViewer({ location }: { location: DesktopLocation }) {
     <div className="flex h-dvh flex-col gap-2">
       <ReviewUI
         key={location.routeKey}
-        desktopPrOwnerAvatarUrl={location.prViewerAvatarUrl}
+        desktopPrOwnerAvatarUrl={
+          viewerTabRequest?.viewerAvatarUrl ?? location.prViewerAvatarUrl
+        }
         desktopPrBody={viewerTabRequest?.body}
-        desktopPrTitle={location.prTitle}
+        desktopPrTitle={viewerTabRequest?.title ?? location.prTitle}
         domain={route.domain}
         initialUrl={route.url}
         path={route.upstreamPath}
@@ -474,16 +475,20 @@ function parseDesktopViewerTab(
   const viewerAvatarUrl =
     url.searchParams.get('asahi-pr-viewer-avatar') ?? undefined;
 
+  const owner = pullTabMatch[1];
+  const repo = pullTabMatch[2];
+  const number = Number(pullTabMatch[3]);
+
   const request: DesktopViewerPrTabRequest = {
+    id: `/${owner}/${repo}/pull/${number}`,
     type: 'pr',
-    owner: pullTabMatch[1],
-    repo: pullTabMatch[2],
-    number: Number(pullTabMatch[3]),
+    owner,
+    repo,
+    number,
     viewerAvatarUrl,
   };
 
   return {
-    id: getViewerTabPath(request),
     ...request,
     ...(prTitle == null ? {} : { title: prTitle }),
   };

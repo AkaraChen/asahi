@@ -13,6 +13,7 @@
     "dev:desktop": "pnpm --dir apps/desktop dev",
     "dev:web": "pnpm build:web && pnpm --dir apps/web dev",
     "connect": "pnpm --filter agent connect",
+    "test:desktop": "pnpm --dir apps/desktop test",
     "typecheck:app": "pnpm --dir apps/app typecheck",
     "typecheck:desktop": "pnpm --dir apps/desktop typecheck",
     "typecheck:server": "pnpm --dir apps/server typecheck",

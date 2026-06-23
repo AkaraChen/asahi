@@ -1,4 +1,7 @@
-import type { DesktopSelectedRepository } from './githubPullRequests';
+import {
+  DesktopSelectedRepositorySchema,
+  type DesktopSelectedRepository,
+} from './githubPullRequests';
 
 export const SELECTED_REPOSITORIES_KEY = 'asahi:selected-repositories';
 
@@ -12,20 +15,10 @@ export function parseSelectedRepositories(
     return [];
   }
 
-  return Array.isArray(parsed) ? parsed.filter(isSelectedRepository) : [];
-}
+  if (!Array.isArray(parsed)) return [];
 
-function isSelectedRepository(value: unknown): value is DesktopSelectedRepository {
-  if (value == null || typeof value !== 'object') {
-    return false;
-  }
-
-  const repository = value as Partial<DesktopSelectedRepository>;
-  return (
-    typeof repository.owner === 'string' &&
-    repository.owner.length > 0 &&
-    typeof repository.name === 'string' &&
-    repository.name.length > 0 &&
-    repository.nameWithOwner === `${repository.owner}/${repository.name}`
-  );
+  return parsed.flatMap((value): DesktopSelectedRepository[] => {
+    const result = DesktopSelectedRepositorySchema.safeParse(value);
+    return result.success ? [result.data] : [];
+  });
 }

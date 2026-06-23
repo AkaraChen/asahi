@@ -39,6 +39,7 @@ describe('githubPullRequests', () => {
           url: 'https://github.com/owner/repo/pull/42',
         },
         'owner/repo',
+        undefined,
         'ADMIN'
       )
     ).toMatchObject({
