@@ -41,7 +41,8 @@ const PoolOptions: WorkerPoolOptions = {
   totalASTLRUCacheSize: WorkerResourceLimits.totalASTLRUCacheSize,
   workerFactory() {
     return new Worker(
-      new URL('@pierre/diffs/worker/worker.js', import.meta.url)
+      new URL('@pierre/diffs/worker/worker.js', import.meta.url),
+      { type: 'module' }
     );
   },
 };

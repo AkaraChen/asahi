@@ -1,6 +1,6 @@
 import { serve, type ServerType } from '@hono/node-server';
 
-import { diffApi } from './diff';
+import { createDiffApi, type DiffApiOptions } from './diff';
 
 const HOSTNAME = '127.0.0.1';
 const CORS_HEADERS = {
@@ -9,18 +9,30 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
 } as const;
 
+type DiffApi = ReturnType<typeof createDiffApi>;
+
 export interface DiffApiServer {
   origin: string;
   port: number;
   close(): Promise<void>;
 }
 
-export function startDiffApiServer(): Promise<DiffApiServer> {
+export interface StartDiffApiServerOptions {
+  getGitHubAuthToken?: DiffApiOptions['getGitHubAuthToken'];
+}
+
+export function startDiffApiServer(
+  options: StartDiffApiServerOptions = {}
+): Promise<DiffApiServer> {
+  const diffApi = createDiffApi({
+    getGitHubAuthToken: options.getGitHubAuthToken,
+  });
+
   return new Promise((resolve, reject) => {
     let settled = false;
     const server = serve(
       {
-        fetch: fetchWithDesktopCors,
+        fetch: (request) => fetchWithDesktopCors(request, diffApi),
         hostname: HOSTNAME,
         overrideGlobalObjects: false,
         port: 0,
@@ -43,7 +55,10 @@ export function startDiffApiServer(): Promise<DiffApiServer> {
   });
 }
 
-async function fetchWithDesktopCors(request: Request): Promise<Response> {
+async function fetchWithDesktopCors(
+  request: Request,
+  diffApi: DiffApi
+): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: CORS_HEADERS, status: 204 });
   }

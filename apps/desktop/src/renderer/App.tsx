@@ -7,9 +7,9 @@ import {
   WorkerPoolContext,
 } from '@asahi/app/layout';
 import { resolveDiffshubViewerRoute } from '@asahi/app/lib/resolve-viewer-route';
-import { HomePage } from '@asahi/app/pages/home';
 import { useEffect, useMemo, useState } from 'react';
 
+import { DesktopHomePage } from './DesktopHomePage';
 import { navigateDesktop } from './navigation';
 
 interface DesktopLocation {
@@ -35,7 +35,7 @@ function DesktopRouter() {
   const location = useDesktopLocation();
 
   if (location.pathSegments.length === 0) {
-    return <HomePage />;
+    return <DesktopHomePage />;
   }
 
   return <DesktopViewer location={location} />;

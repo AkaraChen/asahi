@@ -3,11 +3,17 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { getGitHubAuthToken } from './githubAuth';
+import { listGitHubPullRequestNotifications } from './githubNotifications';
+import {
+  LIST_GITHUB_PULL_REQUEST_NOTIFICATIONS_CHANNEL,
+} from '../shared/githubNotifications';
+
 const currentDir = dirname(fileURLToPath(import.meta.url));
 let diffServerPromise: Promise<DiffApiServer> | undefined;
 
 function getDiffServer(): Promise<DiffApiServer> {
-  diffServerPromise ??= startDiffApiServer();
+  diffServerPromise ??= startDiffApiServer({ getGitHubAuthToken });
   return diffServerPromise;
 }
 
@@ -18,7 +24,6 @@ function createMainWindow(): void {
     minHeight: 640,
     minWidth: 900,
     title: 'Asahi',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -46,6 +51,10 @@ ipcMain.handle('asahi:get-api-base-url', async () => {
   const server = await getDiffServer();
   return server.origin;
 });
+
+ipcMain.handle(LIST_GITHUB_PULL_REQUEST_NOTIFICATIONS_CHANNEL, () =>
+  listGitHubPullRequestNotifications()
+);
 
 void app.whenReady().then(() => {
   createMainWindow();

@@ -10,6 +10,12 @@ const RAW_GITHUB_DIFF_PATH_PATTERN =
   /^\/raw\/[^/]+\/[^/]+\/pull\/[^/]+\.(?:diff|patch)$/;
 const GITHUB_PULL_TAB_PATH_PATTERN =
   /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\/(?:changes|files)$/;
+const GITHUB_PULL_PATCH_PATH_PATTERN =
+  /^\/([^/]+)\/([^/]+)\/pull\/(\d+)\.(diff|patch)$/;
+const GITHUB_COMMIT_PATCH_PATH_PATTERN =
+  /^\/([^/]+)\/([^/]+)\/commit\/([^/]+)\.(diff|patch)$/;
+const GITHUB_COMPARE_PATCH_PATH_PATTERN =
+  /^\/([^/]+)\/([^/]+)\/compare\/([^/]+)\.(diff|patch)$/;
 
 const CACHED_BLOBS = new Map<string, string>([
   [
@@ -43,48 +49,59 @@ interface ResolvedPatchRequest {
   sourceURL?: string;
 }
 
-export const diffApi = new Hono().basePath('/api');
+export interface DiffApiOptions {
+  getGitHubAuthToken?: () => Promise<string | undefined> | string | undefined;
+}
 
-// Validates the accepted path or URL, normalizes it to a raw diff URL, and
-// returns a streaming proxy response so the client can render files as they
-// arrive instead of waiting for the full patch text.
-diffApi.get('/diff', async (context) => {
-  const path = context.req.query('path') ?? null;
-  const domain = context.req.query('domain') ?? null;
-  const url = context.req.query('url') ?? null;
+export function createDiffApi(options: DiffApiOptions = {}) {
+  const diffApi = new Hono().basePath('/api');
 
-  if (path == null && url == null) {
-    return createTextResponse('Path or URL parameter is required', {
-      status: 400,
-    });
-  }
+  // Validates the accepted path or URL, normalizes it to a raw diff URL, and
+  // returns a streaming proxy response so the client can render files as they
+  // arrive instead of waiting for the full patch text.
+  diffApi.get('/diff', async (context) => {
+    const path = context.req.query('path') ?? null;
+    const domain = context.req.query('domain') ?? null;
+    const url = context.req.query('url') ?? null;
 
-  try {
-    // The client normally sends only the GitHub-relative path, but GitHub also
-    // exposes raw PR diffs through patch-diff.githubusercontent.com. Tangled
-    // paths use an explicit domain query parameter and are normalized to their
-    // patch endpoint.
-    const patchRequest = resolvePatchRequest(path, domain, url);
-    if (patchRequest == null) {
-      return createTextResponse('Invalid GitHub patch URL format', {
+    if (path == null && url == null) {
+      return createTextResponse('Path or URL parameter is required', {
         status: 400,
       });
     }
 
-    return await createPatchStreamResponse(
-      patchRequest.patchURL,
-      context.req.raw.signal,
-      {
-        sourceURL: patchRequest.sourceURL ?? patchRequest.patchURL,
+    try {
+      // The client normally sends only the GitHub-relative path, but GitHub also
+      // exposes raw PR diffs through patch-diff.githubusercontent.com. Tangled
+      // paths use an explicit domain query parameter and are normalized to their
+      // patch endpoint.
+      const patchRequest = resolvePatchRequest(path, domain, url);
+      if (patchRequest == null) {
+        return createTextResponse('Invalid GitHub patch URL format', {
+          status: 400,
+        });
       }
-    );
-  } catch (error) {
-    return createTextResponse(
-      error instanceof Error ? error.message : 'Unknown error',
-      { status: 500 }
-    );
-  }
-});
+
+      return await createPatchStreamResponse(
+        patchRequest.patchURL,
+        context.req.raw.signal,
+        {
+          getGitHubAuthToken: options.getGitHubAuthToken,
+          sourceURL: patchRequest.sourceURL ?? patchRequest.patchURL,
+        }
+      );
+    } catch (error) {
+      return createTextResponse(
+        error instanceof Error ? error.message : 'Unknown error',
+        { status: 500 }
+      );
+    }
+  });
+
+  return diffApi;
+}
+
+export const diffApi = createDiffApi();
 
 // Resolves the accepted URL shapes to the exact upstream URL to fetch. Most
 // callers send a GitHub-relative path, but this also permits GitHub's raw PR
@@ -251,6 +268,10 @@ interface TextResponseOptions {
   sourceURL?: string;
 }
 
+interface PatchStreamResponseOptions extends Omit<TextResponseOptions, 'status'> {
+  getGitHubAuthToken?: DiffApiOptions['getGitHubAuthToken'];
+}
+
 // Serves local patch fixtures through the same response path as GitHub data,
 // while rejecting empty files so the viewer does not enter a silent no-op
 // state.
@@ -271,7 +292,7 @@ function createPatchTextResponse(
 async function createPatchStreamResponse(
   patchURL: string,
   requestSignal: AbortSignal,
-  options: Omit<TextResponseOptions, 'status'>
+  options: PatchStreamResponseOptions
 ): Promise<Response> {
   const upstreamController = new AbortController();
   const abortUpstream = () => upstreamController.abort();
@@ -279,9 +300,13 @@ async function createPatchStreamResponse(
 
   let response: Response;
   try {
-    response = await fetch(patchURL, {
+    const upstreamRequest = await createUpstreamPatchRequest(
+      patchURL,
+      options.getGitHubAuthToken
+    );
+    response = await fetch(upstreamRequest.url, {
       cache: 'no-store',
-      headers: { 'User-Agent': 'pierre-diffshub' },
+      headers: upstreamRequest.headers,
       signal: upstreamController.signal,
     });
   } catch {
@@ -299,7 +324,7 @@ async function createPatchStreamResponse(
   }
 
   const contentType = response.headers.get('Content-Type');
-  if (contentType == null || !contentType.startsWith('text/plain')) {
+  if (!isPatchContentType(contentType)) {
     requestSignal.removeEventListener('abort', abortUpstream);
     return createTextResponse(NON_DIFF_RESPONSE_MESSAGE, { status: 415 });
   }
@@ -332,6 +357,98 @@ async function createPatchStreamResponse(
   });
 
   return createTextResponse(stream, options);
+}
+
+async function createUpstreamPatchRequest(
+  patchURL: string,
+  getGitHubAuthToken: DiffApiOptions['getGitHubAuthToken']
+): Promise<{ url: string; headers: Headers }> {
+  const headers = new Headers({ 'User-Agent': 'pierre-diffshub' });
+  const githubApiPatch = resolveGitHubApiPatchRequest(patchURL);
+  const token =
+    githubApiPatch == null
+      ? undefined
+      : await readGitHubAuthToken(getGitHubAuthToken);
+
+  if (githubApiPatch == null || token == null) {
+    return { url: patchURL, headers };
+  }
+
+  headers.set('Accept', githubApiPatch.accept);
+  headers.set('Authorization', `Bearer ${token}`);
+  return { url: githubApiPatch.url, headers };
+}
+
+function resolveGitHubApiPatchRequest(
+  patchURL: string
+): { accept: string; url: string } | undefined {
+  let parsedURL: URL;
+  try {
+    parsedURL = new URL(patchURL);
+  } catch {
+    return undefined;
+  }
+
+  if (parsedURL.hostname !== GITHUB_HOST) {
+    return undefined;
+  }
+
+  const match =
+    GITHUB_PULL_PATCH_PATH_PATTERN.exec(parsedURL.pathname) ??
+    GITHUB_COMMIT_PATCH_PATH_PATTERN.exec(parsedURL.pathname) ??
+    GITHUB_COMPARE_PATCH_PATH_PATTERN.exec(parsedURL.pathname);
+  if (match == null) {
+    return undefined;
+  }
+
+  const owner = match[1];
+  const repo = match[2];
+  const target = match[3];
+  const extension = match[4];
+  if (owner == null || repo == null || target == null || extension == null) {
+    return undefined;
+  }
+
+  const route = parsedURL.pathname.includes('/pull/')
+    ? `pulls/${target}`
+    : parsedURL.pathname.includes('/commit/')
+      ? `commits/${target}`
+      : `compare/${target}`;
+
+  return {
+    accept: `application/vnd.github.v3.${extension}`,
+    url: `https://api.github.com/repos/${owner}/${repo}/${route}`,
+  };
+}
+
+async function readGitHubAuthToken(
+  getGitHubAuthToken: DiffApiOptions['getGitHubAuthToken']
+): Promise<string | undefined> {
+  if (getGitHubAuthToken == null) {
+    return undefined;
+  }
+
+  try {
+    const token = await getGitHubAuthToken();
+    return typeof token === 'string' && token.trim() !== ''
+      ? token.trim()
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isPatchContentType(contentType: string | null): boolean {
+  if (contentType == null) {
+    return false;
+  }
+
+  const normalizedContentType = contentType.toLowerCase();
+  return (
+    normalizedContentType.startsWith('text/plain') ||
+    normalizedContentType.startsWith('application/vnd.github.v3.diff') ||
+    normalizedContentType.startsWith('application/vnd.github.v3.patch')
+  );
 }
 
 // Forwards each validated upstream diff chunk into the client stream.

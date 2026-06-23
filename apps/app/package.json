@@ -6,6 +6,7 @@
   "exports": {
     "./components/review-ui": "./src/components/ReviewUI.tsx",
     "./layout": "./src/layout.ts",
+    "./lib/get-patch-viewer-href": "./src/lib/getPatchViewerHref.ts",
     "./lib/resolve-viewer-route": "./src/lib/resolveDiffshubViewerRoute.ts",
     "./pages/github-redirect": "./src/pages/GitHubRedirectPage.tsx",
     "./pages/home": "./src/pages/home/HomePage.tsx",
