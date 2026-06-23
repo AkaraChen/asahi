@@ -2,52 +2,67 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 import type {
+  DesktopGitHubFailure,
+  DesktopListOwnerRepositoriesRequest,
+  DesktopListPullRequestsRequest,
   DesktopPullRequest,
   DesktopPullRequestResult,
-  DesktopPullRequestReviewDecision,
+  DesktopRepositoriesResult,
+  DesktopRepository,
+  DesktopRepositoryOwnersResult,
+  DesktopRepositoryPermission,
+  DesktopSelectedRepository,
 } from '../shared/githubPullRequests';
 
 const execFileAsync = promisify(execFile);
-const REPOSITORIES_PER_PAGE = 50;
-const PULL_REQUESTS_PER_REPOSITORY = 100;
 const MERGE_PERMISSIONS = new Set(['WRITE', 'MAINTAIN', 'ADMIN']);
 
-const LIST_MERGEABLE_PULL_REQUESTS_QUERY = `
-  query ListMergeablePullRequests($after: String) {
-    viewer {
-      repositories(
-        first: ${REPOSITORIES_PER_PAGE}
+const PULL_REQUESTS_QUERY = `
+  query($owner: String!, $name: String!, $after: String) {
+    repository(owner: $owner, name: $name) {
+      nameWithOwner
+      viewerPermission
+      pullRequests(
+        first: 100
         after: $after
-        affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
-        ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER]
-        isArchived: false
+        states: OPEN
+        orderBy: { field: UPDATED_AT, direction: DESC }
+      ) {
+        pageInfo { endCursor hasNextPage }
+        nodes {
+          id
+          isDraft
+          mergeStateStatus
+          number
+          reviewDecision
+          title
+          updatedAt
+          url
+        }
+      }
+    }
+  }
+`;
+
+const OWNER_REPOSITORIES_QUERY = `
+  query($owner: String!, $after: String) {
+    repositoryOwner(login: $owner) {
+      repositories(
+        first: 100
+        after: $after
+        ownerAffiliations: OWNER
         orderBy: { field: PUSHED_AT, direction: DESC }
       ) {
-        pageInfo {
-          endCursor
-          hasNextPage
-        }
+        pageInfo { endCursor hasNextPage }
         nodes {
+          id
+          name
           nameWithOwner
+          isPrivate
           viewerPermission
-          pullRequests(
-            first: ${PULL_REQUESTS_PER_REPOSITORY}
-            states: OPEN
-            orderBy: { field: UPDATED_AT, direction: DESC }
-          ) {
-            nodes {
-              id
-              isDraft
-              mergeStateStatus
-              number
-              reviewDecision
-              title
-              updatedAt
-              url
-              repository {
-                nameWithOwner
-              }
-            }
+          activePullRequests: pullRequests(states: OPEN) { totalCount }
+          closedPullRequests: pullRequests(states: [CLOSED, MERGED]) {
+            totalCount
           }
         }
       }
@@ -55,167 +70,239 @@ const LIST_MERGEABLE_PULL_REQUESTS_QUERY = `
   }
 `;
 
-interface GraphQLResponse {
-  data?: {
-    viewer?: {
-      repositories?: {
-        pageInfo?: {
-          endCursor?: unknown;
-          hasNextPage?: unknown;
-        };
-        nodes?: unknown;
-      };
-    };
-  };
-}
+type PageInfo = { endCursor: string | null; hasNextPage: boolean };
+type GitHubPermission = DesktopRepositoryPermission | 'READ' | 'TRIAGE';
 
-interface GraphQLRepository {
-  nameWithOwner?: unknown;
-  viewerPermission?: unknown;
-  pullRequests?: {
-    nodes?: unknown;
-  };
-}
+type GitHubRepository = {
+  id: string;
+  name: string;
+  nameWithOwner: string;
+  isPrivate: boolean;
+  viewerPermission: GitHubPermission;
+  activePullRequests: { totalCount: number };
+  closedPullRequests: { totalCount: number };
+};
 
-interface GraphQLPullRequest {
-  id?: unknown;
-  isDraft?: unknown;
-  mergeStateStatus?: unknown;
-  number?: unknown;
-  reviewDecision?: unknown;
-  repository?: {
-    nameWithOwner?: unknown;
-  };
-  title?: unknown;
-  updatedAt?: unknown;
-  url?: unknown;
-}
+type PullRequestNode = Omit<
+  DesktopPullRequest,
+  'owner' | 'repo' | 'repository' | 'viewerPath' | 'viewerPermission'
+>;
 
-export async function listGitHubMergeablePullRequests(): Promise<DesktopPullRequestResult> {
-  const items: DesktopPullRequest[] = [];
-  let after: string | undefined;
+type PullRequestConnection = {
+  pageInfo: PageInfo;
+  nodes: PullRequestNode[];
+};
 
+export async function listGitHubRepositoryOwners(): Promise<DesktopRepositoryOwnersResult> {
   try {
-    for (;;) {
-      const result = await fetchPullRequestPage(after);
-      items.push(...mapGraphQLResponse(result));
+    const [viewer, organizations] = await Promise.all([
+      rest<{ avatar_url: string; login: string; name: string | null }>('user'),
+      rest<
+        { avatar_url: string; login: string; description: string | null }[]
+      >('user/orgs?per_page=100'),
+    ]);
 
-      const pageInfo = result.data?.viewer?.repositories?.pageInfo;
-      if (pageInfo?.hasNextPage !== true) break;
-      after = stringValue(pageInfo.endCursor);
-      if (after == null) break;
-    }
+    return {
+      ok: true,
+      owners: [
+        {
+          avatarUrl: viewer.avatar_url,
+          login: viewer.login,
+          name: viewer.name,
+          type: 'personal',
+        },
+        ...organizations.map((organization) => ({
+          avatarUrl: organization.avatar_url,
+          login: organization.login,
+          name: organization.description,
+          type: 'organization' as const,
+        })),
+      ],
+    };
   } catch (error) {
     return mapGhError(error);
   }
+}
+
+export async function listGitHubOwnerRepositories(
+  request: DesktopListOwnerRepositoriesRequest
+): Promise<DesktopRepositoriesResult> {
+  try {
+    const repositories = await loadOwnerRepositories(request.owner);
+    const items = repositories
+      .map(toDesktopRepository)
+      .filter((repository) => repository != null);
+
+    return {
+      ok: true,
+      items,
+    };
+  } catch (error) {
+    return mapGhError(error);
+  }
+}
+
+async function loadOwnerRepositories(owner: string): Promise<GitHubRepository[]> {
+  const items: GitHubRepository[] = [];
+  let after: string | undefined;
+
+  for (;;) {
+    const response = await graphql<{
+      data: {
+        repositoryOwner: {
+          repositories: {
+            pageInfo: PageInfo;
+            nodes: GitHubRepository[];
+          };
+        } | null;
+      };
+    }>(OWNER_REPOSITORIES_QUERY, { owner, after });
+    const repositories = response.data.repositoryOwner?.repositories;
+    if (repositories == null) return items;
+
+    items.push(...repositories.nodes);
+    if (!repositories.pageInfo.hasNextPage) break;
+    after = repositories.pageInfo.endCursor ?? undefined;
+    if (after == null) break;
+  }
+
+  return items;
+}
+
+export async function listGitHubPullRequestsForRepositories(
+  request: DesktopListPullRequestsRequest
+): Promise<DesktopPullRequestResult> {
+  try {
+    const results = await Promise.all(
+      request.repositories.map(loadPullRequestsForRepository)
+    );
+
+    return {
+      ok: true,
+      items: results
+        .flat()
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
+      fetchedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return mapGhError(error);
+  }
+}
+
+async function loadPullRequestsForRepository(
+  repository: DesktopSelectedRepository
+): Promise<DesktopPullRequest[]> {
+  const items: DesktopPullRequest[] = [];
+  let after: string | undefined;
+
+  for (;;) {
+    const response = await graphql<{
+      data: {
+        repository: {
+          nameWithOwner: string;
+          viewerPermission: GitHubPermission;
+          pullRequests: PullRequestConnection;
+        } | null;
+      };
+    }>(PULL_REQUESTS_QUERY, {
+      owner: repository.owner,
+      name: repository.name,
+      after,
+    });
+    const remoteRepository = response.data.repository;
+    if (
+      remoteRepository == null ||
+      !MERGE_PERMISSIONS.has(remoteRepository.viewerPermission)
+    ) {
+      return [];
+    }
+
+    items.push(
+      ...remoteRepository.pullRequests.nodes.map((pullRequest) =>
+        toDesktopPullRequest(
+          pullRequest,
+          remoteRepository.nameWithOwner,
+          remoteRepository.viewerPermission as DesktopRepositoryPermission
+        )
+      )
+    );
+
+    if (!remoteRepository.pullRequests.pageInfo.hasNextPage) break;
+    after = remoteRepository.pullRequests.pageInfo.endCursor ?? undefined;
+    if (after == null) break;
+  }
+
+  return items;
+}
+
+export function toDesktopRepository(
+  repository: GitHubRepository
+): DesktopRepository | undefined {
+  if (
+    repository.viewerPermission !== 'WRITE' &&
+    repository.viewerPermission !== 'MAINTAIN' &&
+    repository.viewerPermission !== 'ADMIN'
+  ) {
+    return undefined;
+  }
+  const viewerPermission = repository.viewerPermission;
+  const [owner] = repository.nameWithOwner.split('/');
 
   return {
-    ok: true,
-    items: items
-      .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
-    fetchedAt: new Date().toISOString(),
+    id: repository.id,
+    owner,
+    name: repository.name,
+    nameWithOwner: repository.nameWithOwner,
+    isPrivate: repository.isPrivate,
+    activePullRequestCount: repository.activePullRequests.totalCount,
+    closedPullRequestCount: repository.closedPullRequests.totalCount,
+    viewerPermission,
   };
 }
 
-async function fetchPullRequestPage(after: string | undefined) {
-  const args = ['api', 'graphql', '-f', `query=${LIST_MERGEABLE_PULL_REQUESTS_QUERY}`];
-  if (after != null) {
-    args.push('-F', `after=${after}`);
+export function toDesktopPullRequest(
+  pullRequest: PullRequestNode,
+  repository: string,
+  viewerPermission: DesktopRepositoryPermission
+): DesktopPullRequest {
+  const [owner, repo] = repository.split('/');
+
+  return {
+    ...pullRequest,
+    owner,
+    repo,
+    repository,
+    viewerPath: `/${owner}/${repo}/pull/${pullRequest.number}`,
+    viewerPermission,
+  };
+}
+
+async function graphql<T>(
+  query: string,
+  variables: Record<string, string | undefined> = {}
+): Promise<T> {
+  const args = ['api', 'graphql', '-f', `query=${query}`];
+  for (const [name, value] of Object.entries(variables)) {
+    if (value != null) args.push('-F', `${name}=${value}`);
   }
 
   const { stdout } = await execFileAsync('gh', args, {
     maxBuffer: 1024 * 1024 * 16,
     timeout: 30_000,
   });
-
-  return JSON.parse(stdout) as GraphQLResponse;
+  return JSON.parse(stdout) as T;
 }
 
-export function mapGraphQLResponse(response: GraphQLResponse): DesktopPullRequest[] {
-  const repositories = response.data?.viewer?.repositories?.nodes;
-  if (!Array.isArray(repositories)) return [];
-
-  return repositories.flatMap((repository) => mapRepository(repository));
+async function rest<T>(endpoint: string): Promise<T> {
+  const { stdout } = await execFileAsync('gh', ['api', endpoint], {
+    maxBuffer: 1024 * 1024 * 16,
+    timeout: 30_000,
+  });
+  return JSON.parse(stdout) as T;
 }
 
-function mapRepository(value: unknown): DesktopPullRequest[] {
-  if (!isObject(value)) return [];
-
-  const repository = value as GraphQLRepository;
-  const permission = stringValue(repository.viewerPermission);
-  if (permission == null || !MERGE_PERMISSIONS.has(permission)) return [];
-
-  const pullRequests = repository.pullRequests?.nodes;
-  if (!Array.isArray(pullRequests)) return [];
-
-  return pullRequests
-    .map((pullRequest) =>
-      mapPullRequest(
-        pullRequest,
-        permission as DesktopPullRequest['viewerPermission']
-      )
-    )
-    .filter((item): item is DesktopPullRequest => item != null);
-}
-
-function mapPullRequest(
-  value: unknown,
-  viewerPermission: DesktopPullRequest['viewerPermission']
-): DesktopPullRequest | undefined {
-  if (!isObject(value)) return undefined;
-
-  const pullRequest = value as GraphQLPullRequest;
-  const id = stringValue(pullRequest.id);
-  const title = stringValue(pullRequest.title);
-  const repository = stringValue(pullRequest.repository?.nameWithOwner);
-  const number = numberValue(pullRequest.number);
-  const url = stringValue(pullRequest.url);
-  const updatedAt = stringValue(pullRequest.updatedAt);
-  if (
-    id == null ||
-    title == null ||
-    repository == null ||
-    number == null ||
-    url == null ||
-    updatedAt == null
-  ) {
-    return undefined;
-  }
-
-  const [owner, repo] = repository.split('/');
-  if (owner == null || repo == null || owner === '' || repo === '') {
-    return undefined;
-  }
-
-  return {
-    id,
-    title,
-    repository,
-    owner,
-    repo,
-    number,
-    url,
-    viewerPath: `/${owner}/${repo}/pull/${number}`,
-    updatedAt,
-    isDraft: pullRequest.isDraft === true,
-    reviewDecision: reviewDecisionValue(pullRequest.reviewDecision),
-    mergeStateStatus: stringValue(pullRequest.mergeStateStatus) ?? null,
-    viewerPermission,
-  };
-}
-
-function reviewDecisionValue(
-  value: unknown
-): DesktopPullRequestReviewDecision {
-  return value === 'APPROVED' ||
-    value === 'CHANGES_REQUESTED' ||
-    value === 'REVIEW_REQUIRED'
-    ? value
-    : null;
-}
-
-function mapGhError(error: unknown): DesktopPullRequestResult {
-  if (isNodeError(error) && error.code === 'ENOENT') {
+function mapGhError(error: unknown): DesktopGitHubFailure {
+  if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
     return {
       ok: false,
       error: 'gh-not-found',
@@ -223,7 +310,11 @@ function mapGhError(error: unknown): DesktopPullRequestResult {
     };
   }
 
-  const stderr = isExecError(error) ? error.stderr : '';
+  const maybeStderr =
+    error instanceof Error
+      ? (error as Error & { stderr?: unknown }).stderr
+      : undefined;
+  const stderr = typeof maybeStderr === 'string' ? maybeStderr : '';
   if (/auth login|not logged|authentication|HTTP 401/i.test(stderr)) {
     return {
       ok: false,
@@ -236,38 +327,13 @@ function mapGhError(error: unknown): DesktopPullRequestResult {
     return {
       ok: false,
       error: 'parse-failed',
-      message: 'GitHub CLI returned unreadable pull request data.',
+      message: 'GitHub CLI returned unreadable GitHub data.',
     };
   }
 
   return {
     ok: false,
     error: 'gh-api-failed',
-    message: stderr.trim() || 'GitHub CLI failed to load pull requests.',
+    message: stderr.trim() || 'GitHub CLI failed to load GitHub data.',
   };
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function numberValue(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isSafeInteger(value)
-    ? value
-    : undefined;
-}
-
-function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && 'code' in error;
-}
-
-function isExecError(error: unknown): error is Error & { stderr: string } {
-  return (
-    error instanceof Error &&
-    typeof (error as { stderr?: unknown }).stderr === 'string'
-  );
 }

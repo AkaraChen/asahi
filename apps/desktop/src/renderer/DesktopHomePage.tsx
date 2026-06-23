@@ -1,64 +1,72 @@
 import { DiffUrlForm } from '@asahi/app/components/diff-url-form';
 import { DiffsHubLogo } from '@asahi/app/components/diffshub-logo';
+import { Switch } from '@asahi/app/components/switch';
+import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import type {
   DesktopPullRequest,
   DesktopPullRequestReviewDecision,
+  DesktopRepository,
+  DesktopSelectedRepository,
 } from '../shared/githubPullRequests';
 import { navigateDesktop } from './navigation';
 import Link from './next-link';
 
-type PullRequestState =
-  | { status: 'loading' }
-  | {
-      status: 'ready';
-      items: DesktopPullRequest[];
-      fetchedAt: string;
-    }
-  | {
-      status: 'error';
-      message: string;
-    };
+const SELECTED_REPOSITORIES_KEY = 'asahi:selected-repositories';
 
 type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
 type UpdatedFilter = 'all' | '24h' | '7d' | '30d';
 
 export function DesktopHomePage() {
-  const [state, setState] = useState<PullRequestState>({ status: 'loading' });
+  const [selectedRepositories, setSelectedRepositories] = useState<
+    DesktopSelectedRepository[]
+  >(readSelectedRepositories);
+  const [repositoryFilter, setRepositoryFilter] = useState('all');
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
-  const [updatedFilter, setUpdatedFilter] = useState<UpdatedFilter>('30d');
+  const [updatedFilter, setUpdatedFilter] = useState<UpdatedFilter>('all');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const pullRequestsQuery = useQuery({
+    queryKey: ['repository-pull-requests', selectedRepositories],
+    queryFn: async () => {
+      if (selectedRepositories.length === 0) return [];
 
-  const loadPullRequests = useCallback(async () => {
-    setState({ status: 'loading' });
-    const result = await window.asahi.listMergeablePullRequests();
-    if (result.ok) {
-      setState({
-        status: 'ready',
-        items: result.items,
-        fetchedAt: result.fetchedAt,
+      const result = await window.asahi.listRepositoryPullRequests({
+        repositories: selectedRepositories,
       });
-      return;
-    }
+      if (!result.ok) throw new Error(result.message);
+      return result.items;
+    },
+  });
 
-    setState({
-      status: 'error',
-      message: result.message,
-    });
-  }, []);
-
-  useEffect(() => {
-    void loadPullRequests();
-  }, [loadPullRequests]);
+  const saveSelectedRepositories = useCallback(
+    (next: DesktopSelectedRepository[]) => {
+      setSelectedRepositories(next);
+      localStorage.setItem(SELECTED_REPOSITORIES_KEY, JSON.stringify(next));
+      if (
+        repositoryFilter !== 'all' &&
+        next.every((repository) => repository.nameWithOwner !== repositoryFilter)
+      ) {
+        setRepositoryFilter('all');
+      }
+    },
+    [repositoryFilter]
+  );
 
   const filteredItems = useMemo(
     () =>
-      state.status === 'ready'
-        ? state.items.filter((item) =>
-            matchesReviewFilter(item.reviewDecision, reviewFilter)
-          ).filter((item) => matchesUpdatedFilter(item.updatedAt, updatedFilter))
-        : [],
-    [reviewFilter, state, updatedFilter]
+      (pullRequestsQuery.data ?? [])
+        .filter((item) =>
+          repositoryFilter === 'all'
+            ? true
+            : item.repository === repositoryFilter
+        )
+        .filter((item) =>
+          matchesReviewFilter(item.reviewDecision, reviewFilter)
+        )
+        .filter((item) => matchesUpdatedFilter(item.updatedAt, updatedFilter)),
+    [pullRequestsQuery.data, repositoryFilter, reviewFilter, updatedFilter]
   );
 
   return (
@@ -75,104 +83,364 @@ export function DesktopHomePage() {
           placeholder="https://github.com/org/repo/123"
           inputClassName="w-full md:w-auto"
         />
-        <label className="sr-only" htmlFor="review-filter">
-          Review filter
-        </label>
-        <select
-          id="review-filter"
-          className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+        <Select
+          label="Review filter"
+          onChange={(value) => setReviewFilter(value as ReviewFilter)}
           value={reviewFilter}
-          onChange={(event) =>
-            setReviewFilter(event.currentTarget.value as ReviewFilter)
-          }
         >
           <option value="all">All reviews</option>
           <option value="pending-review">Pending review</option>
           <option value="approved">Approved</option>
           <option value="changes-requested">Changes requested</option>
-        </select>
-        <label className="sr-only" htmlFor="updated-filter">
-          Updated filter
-        </label>
-        <select
-          id="updated-filter"
-          className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+        </Select>
+        <Select
+          label="Updated filter"
+          onChange={(value) => setUpdatedFilter(value as UpdatedFilter)}
           value={updatedFilter}
-          onChange={(event) =>
-            setUpdatedFilter(event.currentTarget.value as UpdatedFilter)
-          }
         >
+          <option value="all">All time</option>
           <option value="24h">Updated 24h</option>
           <option value="7d">Updated 7d</option>
           <option value="30d">Updated 30d</option>
-          <option value="all">All time</option>
-        </select>
-        <button
-          type="button"
-          aria-label="Refresh pull requests"
-          className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-9 items-center justify-center rounded-md border border-transparent transition-colors disabled:opacity-50"
-          disabled={state.status === 'loading'}
-          onClick={() => void loadPullRequests()}
-        >
-          <svg
-            aria-hidden="true"
-            className={
-              state.status === 'loading' ? 'size-4 animate-spin' : 'size-4'
-            }
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-            />
-          </svg>
-        </button>
+        </Select>
+        <IconButton
+          label="Refresh pull requests"
+          loading={pullRequestsQuery.isFetching}
+          onClick={() => void pullRequestsQuery.refetch()}
+        />
       </header>
 
-      <section className="bg-background min-h-0 overflow-hidden">
-        {state.status === 'loading' && <LoadingRows />}
-        {state.status === 'error' && (
-          <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
-            <div>
-              <h2 className="text-sm font-medium">Pull requests unavailable</h2>
-              <p className="text-muted-foreground mt-1 max-w-md text-sm">
-                {state.message}
-              </p>
-            </div>
+      <div className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="border-border-opaque bg-[var(--diffshub-sidebar-bg)] min-h-0 border-r">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <h2 className="mr-auto text-sm font-medium">Repositories</h2>
             <button
               type="button"
-              className="hover:bg-accent rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-colors"
-              onClick={() => void loadPullRequests()}
+              aria-label="Add repository"
+              className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-md transition-colors"
+              onClick={() => setDialogOpen(true)}
             >
-              Try again
+              <PlusIcon />
             </button>
           </div>
-        )}
-        {state.status === 'ready' && filteredItems.length === 0 && (
-          <div className="flex h-full min-h-64 items-center justify-center px-6 text-center">
-            <div>
-              <h2 className="text-sm font-medium">No matching pull requests</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Adjust the filters or paste a PR into the toolbar.
-              </p>
-            </div>
-          </div>
-        )}
-        {state.status === 'ready' && filteredItems.length > 0 && (
-          <ul className="divide-border h-full overflow-auto divide-y">
-            {filteredItems.map((item) => (
-              <li key={item.id}>
-                <PullRequestRow item={item} />
-              </li>
+          <nav className="h-[calc(100%-48px)] overflow-auto px-2 pb-2">
+            {selectedRepositories.map((repository) => (
+              <RepositoryButton
+                active={repositoryFilter === repository.nameWithOwner}
+                key={repository.nameWithOwner}
+                label={repository.nameWithOwner}
+                onClick={() =>
+                  setRepositoryFilter((current) =>
+                    current === repository.nameWithOwner
+                      ? 'all'
+                      : repository.nameWithOwner
+                  )
+                }
+                onRemove={() =>
+                  saveSelectedRepositories(
+                    selectedRepositories.filter(
+                      (item) => item.nameWithOwner !== repository.nameWithOwner
+                    )
+                  )
+                }
+              />
             ))}
-          </ul>
-        )}
-      </section>
+          </nav>
+        </aside>
+
+        <section className="bg-background min-h-0 overflow-hidden">
+          {pullRequestsQuery.isPending && selectedRepositories.length > 0 && (
+            <LoadingRows />
+          )}
+          {pullRequestsQuery.isError && (
+            <EmptyState
+              action="Try again"
+              message={pullRequestsQuery.error.message}
+              onAction={() => void pullRequestsQuery.refetch()}
+              title="Pull requests unavailable"
+            />
+          )}
+          {!pullRequestsQuery.isError && selectedRepositories.length === 0 && (
+            <EmptyState
+              action="Add repository"
+              message="Select repositories first; PRs load only from that set."
+              onAction={() => setDialogOpen(true)}
+              title="No repositories selected"
+            />
+          )}
+          {!pullRequestsQuery.isPending &&
+            !pullRequestsQuery.isError &&
+            selectedRepositories.length > 0 &&
+            filteredItems.length === 0 && (
+              <EmptyState
+                message="Adjust the filters or select another repository."
+                title="No matching pull requests"
+              />
+            )}
+          {!pullRequestsQuery.isError && filteredItems.length > 0 && (
+            <ul className="divide-border h-full overflow-auto divide-y">
+              {filteredItems.map((item) => (
+                <li key={item.id}>
+                  <PullRequestRow item={item} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {dialogOpen && (
+        <RepositoryDialog
+          onClose={() => setDialogOpen(false)}
+          onSelectedChange={saveSelectedRepositories}
+          selectedRepositories={selectedRepositories}
+        />
+      )}
     </main>
+  );
+}
+
+function RepositoryDialog({
+  onClose,
+  onSelectedChange,
+  selectedRepositories,
+}: {
+  onClose: () => void;
+  onSelectedChange: (repositories: DesktopSelectedRepository[]) => void;
+  selectedRepositories: DesktopSelectedRepository[];
+}) {
+  const [ownerKey, setOwnerKey] = useState('');
+  const [filter, setFilter] = useState('');
+  const ownersQuery = useQuery({
+    queryKey: ['repository-owners'],
+    queryFn: async () => {
+      const result = await window.asahi.listRepositoryOwners();
+      if (!result.ok) throw new Error(result.message);
+      return result.owners;
+    },
+  });
+  const owners = ownersQuery.data ?? [];
+  const owner =
+    owners.find((item) => `${item.type}:${item.login}` === ownerKey) ??
+    owners[0] ??
+    null;
+  const repositoriesQuery = useQuery({
+    queryKey: ['owner-repositories', owner?.type, owner?.login],
+    queryFn: async () => {
+      if (owner == null) return [];
+
+      const result = await window.asahi.listOwnerRepositories({
+        owner: owner.login,
+        ownerType: owner.type,
+      });
+      if (!result.ok) throw new Error(result.message);
+      return result.items;
+    },
+    enabled: owner != null,
+  });
+  const repositories = repositoriesQuery.data ?? [];
+
+  useEffect(() => {
+    setFilter('');
+  }, [owner?.login, owner?.type]);
+
+  const selectedSet = useMemo(
+    () =>
+      new Set(
+        selectedRepositories.map((repository) => repository.nameWithOwner)
+      ),
+    [selectedRepositories]
+  );
+  const visibleRepositories = repositories.filter((repository) =>
+    repository.name.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  function toggleRepository(repository: DesktopRepository) {
+    if (selectedSet.has(repository.nameWithOwner)) {
+      onSelectedChange(
+        selectedRepositories.filter(
+          (item) => item.nameWithOwner !== repository.nameWithOwner
+        )
+      );
+      return;
+    }
+
+    onSelectedChange([
+      ...selectedRepositories,
+      {
+        owner: repository.owner,
+        name: repository.name,
+        nameWithOwner: repository.nameWithOwner,
+      },
+    ]);
+  }
+
+  return (
+    <div className="bg-background fixed top-1/2 left-1/2 z-50 grid h-[min(560px,calc(100dvh-48px))] w-[min(760px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)]">
+      <div className="border-border flex items-center gap-2 border-b px-3 py-2">
+        <h2 className="mr-auto text-sm font-medium">Add repository</h2>
+        <button
+          type="button"
+          aria-label="Close"
+          className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-md transition-colors"
+          onClick={onClose}
+        >
+          <XIcon />
+        </button>
+      </div>
+      <div className="grid min-h-0 grid-cols-[220px_minmax(0,1fr)]">
+        <aside className="border-border min-h-0 overflow-auto border-r p-2">
+          {ownersQuery.isPending && (
+            <p className="text-muted-foreground px-2 py-2 text-sm">
+              Loading owners...
+            </p>
+          )}
+          {ownersQuery.isError && (
+            <p className="text-muted-foreground px-2 py-2 text-sm">
+              {ownersQuery.error.message}
+            </p>
+          )}
+          {ownersQuery.isSuccess && owners.length === 0 && (
+            <p className="text-muted-foreground px-2 py-2 text-sm">
+              No owners found.
+            </p>
+          )}
+          {ownersQuery.isSuccess &&
+            owners.map((item) => (
+              <button
+                type="button"
+                className={
+                  item.login === owner?.login
+                    ? 'bg-accent text-foreground grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm'
+                    : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors'
+                }
+                key={`${item.type}:${item.login}`}
+                onClick={() => setOwnerKey(`${item.type}:${item.login}`)}
+              >
+                <img
+                  alt=""
+                  className="bg-muted size-6 rounded-full"
+                  src={item.avatarUrl}
+                />
+                <span className="truncate">{item.login}</span>
+              </button>
+            ))}
+        </aside>
+        <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+          <div className="p-2">
+            <label className="sr-only" htmlFor="repository-filter">
+              Filter repositories
+            </label>
+            <input
+              id="repository-filter"
+              className="border-border bg-background h-9 w-full rounded-md border px-2 text-sm outline-none"
+              onChange={(event) => setFilter(event.currentTarget.value)}
+              placeholder="Filter repositories"
+              value={filter}
+            />
+          </div>
+          <div className="grid min-h-0 auto-rows-min grid-cols-2 gap-3 overflow-auto p-3">
+            {owner != null && repositoriesQuery.isPending && (
+              <RepositoryCardSkeletons />
+            )}
+            {repositoriesQuery.isError && (
+              <p className="text-muted-foreground col-span-full px-1 py-2 text-sm">
+                {repositoriesQuery.error.message}
+              </p>
+            )}
+            {repositoriesQuery.isSuccess &&
+              visibleRepositories.map((repository) => {
+                const selected = selectedSet.has(repository.nameWithOwner);
+                return (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="border-border hover:bg-accent/60 grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-md border px-3 py-3 text-left transition-colors"
+                    key={repository.id}
+                    onClick={() => toggleRepository(repository)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      toggleRepository(repository);
+                    }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm">
+                        {repository.name}
+                      </span>
+                      <span className="text-muted-foreground mt-1 block truncate text-xs">
+                        Active {repository.activePullRequestCount} · Closed{' '}
+                        {repository.closedPullRequestCount}
+                      </span>
+                    </span>
+                    <Switch
+                      aria-label={`Select ${repository.name}`}
+                      checked={selected}
+                      onCheckedChange={() => toggleRepository(repository)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </div>
+                );
+              })}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function RepositoryCardSkeletons() {
+  return Array.from({ length: 4 }, (_, index) => (
+    <div
+      className="border-border grid min-h-20 rounded-md border px-3 py-3"
+      key={index}
+    >
+      <span className="bg-muted h-4 w-2/3 animate-pulse rounded" />
+    </div>
+  ));
+}
+
+function RepositoryButton({
+  active,
+  label,
+  onClick,
+  onRemove,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={
+        active
+          ? 'bg-accent text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2 text-left text-sm'
+          : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors'
+      }
+      onClick={onClick}
+    >
+      <span className="truncate">{label}</span>
+      <span
+        role="button"
+        tabIndex={0}
+        aria-label={`Remove ${label}`}
+        className="opacity-0 transition-opacity group-hover:opacity-100"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRemove();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          onRemove();
+        }}
+      >
+        <XIcon />
+      </span>
+    </button>
   );
 }
 
@@ -192,9 +460,105 @@ function PullRequestRow({ item }: { item: DesktopPullRequest }) {
         </span>
       </span>
       <span className="text-muted-foreground shrink-0 text-xs">
-        <span>{formatDateTime(item.updatedAt)}</span>
+        {formatDateTime(item.updatedAt)}
       </span>
     </button>
+  );
+}
+
+function Select({
+  children,
+  label,
+  onChange,
+  value,
+}: {
+  children: ReactNode;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  const id = label.toLowerCase().replace(/\s+/g, '-');
+  return (
+    <>
+      <label className="sr-only" htmlFor={id}>
+        {label}
+      </label>
+      <select
+        id={id}
+        className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+        onChange={(event) => onChange(event.currentTarget.value)}
+        value={value}
+      >
+        {children}
+      </select>
+    </>
+  );
+}
+
+function IconButton({
+  label,
+  loading,
+  onClick,
+}: {
+  label: string;
+  loading: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-9 items-center justify-center rounded-md border border-transparent transition-colors disabled:opacity-50"
+      disabled={loading}
+      onClick={onClick}
+    >
+      <svg
+        aria-hidden="true"
+        className={loading ? 'size-4 animate-spin' : 'size-4'}
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+        />
+      </svg>
+    </button>
+  );
+}
+
+function EmptyState({
+  action,
+  message,
+  onAction,
+  title,
+}: {
+  action?: string;
+  message: string;
+  onAction?: () => void;
+  title: string;
+}) {
+  return (
+    <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+      <div>
+        <h2 className="text-sm font-medium">{title}</h2>
+        <p className="text-muted-foreground mt-1 max-w-md text-sm">
+          {message}
+        </p>
+      </div>
+      {action != null && onAction != null && (
+        <button
+          type="button"
+          className="hover:bg-accent rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-colors"
+          onClick={onAction}
+        >
+          {action}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -224,6 +588,14 @@ function matchesUpdatedFilter(value: string, filter: UpdatedFilter): boolean {
   return Date.now() - updatedAt <= hours * 60 * 60 * 1000;
 }
 
+function readSelectedRepositories(): DesktopSelectedRepository[] {
+  try {
+    return JSON.parse(localStorage.getItem(SELECTED_REPOSITORIES_KEY) ?? '[]');
+  } catch {
+    return [];
+  }
+}
+
 function LoadingRows() {
   return (
     <div className="divide-border divide-y">
@@ -239,12 +611,36 @@ function LoadingRows() {
 
 function formatDateTime(value: string): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+  if (Number.isNaN(date.getTime())) return value;
 
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg aria-hidden="true" className="size-4" fill="none" viewBox="0 0 24 24">
+      <path
+        d="m6 6 12 12M18 6 6 18"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
 }

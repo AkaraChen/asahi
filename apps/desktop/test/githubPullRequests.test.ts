@@ -1,127 +1,57 @@
 import { describe, expect, test } from 'bun:test';
 
-import { mapGraphQLResponse } from '../src/main/githubPullRequests';
+import {
+  toDesktopPullRequest,
+  toDesktopRepository,
+} from '../src/main/githubPullRequests';
 
-describe('mapGraphQLResponse', () => {
-  test('maps open PRs from repositories with merge permissions', () => {
-    const items = mapGraphQLResponse({
-      data: {
-        viewer: {
-          repositories: {
-            nodes: [
-              repository({
-                nameWithOwner: 'owner/write-repo',
-                permission: 'WRITE',
-                pullRequests: [
-                  pullRequest({
-                    id: '1',
-                    number: 10,
-                    repository: 'owner/write-repo',
-                    reviewDecision: 'REVIEW_REQUIRED',
-                    title: 'Needs review',
-                    updatedAt: '2026-06-22T10:00:00Z',
-                  }),
-                ],
-              }),
-              repository({
-                nameWithOwner: 'owner/read-repo',
-                permission: 'READ',
-                pullRequests: [
-                  pullRequest({
-                    id: '2',
-                    number: 20,
-                    repository: 'owner/read-repo',
-                    title: 'No merge permission',
-                    updatedAt: '2026-06-23T10:00:00Z',
-                  }),
-                ],
-              }),
-            ],
-          },
-        },
-      },
-    });
-
-    expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({
-      id: '1',
-      repository: 'owner/write-repo',
-      reviewDecision: 'REVIEW_REQUIRED',
-      viewerPath: '/owner/write-repo/pull/10',
+describe('githubPullRequests', () => {
+  test('converts a repository node', () => {
+    expect(
+      toDesktopRepository({
+        id: 'repo-id',
+        isPrivate: true,
+        name: 'repo',
+        nameWithOwner: 'owner/repo',
+        viewerPermission: 'WRITE',
+        activePullRequests: { totalCount: 3 },
+        closedPullRequests: { totalCount: 9 },
+      })
+    ).toEqual({
+      id: 'repo-id',
+      isPrivate: true,
+      name: 'repo',
+      nameWithOwner: 'owner/repo',
+      owner: 'owner',
+      activePullRequestCount: 3,
+      closedPullRequestCount: 9,
       viewerPermission: 'WRITE',
     });
   });
 
-  test('skips malformed PRs', () => {
-    const items = mapGraphQLResponse({
-      data: {
-        viewer: {
-          repositories: {
-            nodes: [
-              repository({
-                nameWithOwner: 'owner/repo',
-                permission: 'ADMIN',
-                pullRequests: [
-                  { id: 'missing-fields' },
-                  pullRequest({
-                    id: 'good',
-                    number: 123,
-                    repository: 'owner/repo',
-                    title: 'Good PR',
-                    updatedAt: '2026-06-23T10:00:00Z',
-                  }),
-                ],
-              }),
-            ],
-          },
+  test('converts a pull request node', () => {
+    expect(
+      toDesktopPullRequest(
+        {
+          id: 'pr-id',
+          isDraft: false,
+          mergeStateStatus: 'CLEAN',
+          number: 42,
+          reviewDecision: 'APPROVED',
+          title: 'Ship it',
+          updatedAt: '2026-06-23T10:00:00Z',
+          url: 'https://github.com/owner/repo/pull/42',
         },
-      },
+        'owner/repo',
+        'ADMIN'
+      )
+    ).toMatchObject({
+      id: 'pr-id',
+      owner: 'owner',
+      repo: 'repo',
+      repository: 'owner/repo',
+      viewerPath: '/owner/repo/pull/42',
+      viewerPermission: 'ADMIN',
     });
-
-    expect(items.map((item) => item.id)).toEqual(['good']);
   });
 });
-
-function repository({
-  nameWithOwner,
-  permission,
-  pullRequests,
-}: {
-  nameWithOwner: string;
-  permission: string;
-  pullRequests: unknown[];
-}) {
-  return {
-    nameWithOwner,
-    viewerPermission: permission,
-    pullRequests: { nodes: pullRequests },
-  };
-}
-
-function pullRequest({
-  id,
-  number,
-  repository,
-  reviewDecision = null,
-  title,
-  updatedAt,
-}: {
-  id: string;
-  number: number;
-  repository: string;
-  reviewDecision?: string | null;
-  title: string;
-  updatedAt: string;
-}) {
-  return {
-    id,
-    isDraft: false,
-    mergeStateStatus: 'CLEAN',
-    number,
-    reviewDecision,
-    repository: { nameWithOwner: repository },
-    title,
-    updatedAt,
-    url: `https://github.com/${repository}/pull/${number}`,
-  };
-}

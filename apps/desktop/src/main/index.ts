@@ -4,9 +4,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getGitHubAuthToken } from './githubAuth';
-import { listGitHubMergeablePullRequests } from './githubPullRequests';
 import {
-  LIST_MERGEABLE_PULL_REQUESTS_CHANNEL,
+  listGitHubOwnerRepositories,
+  listGitHubPullRequestsForRepositories,
+  listGitHubRepositoryOwners,
+} from './githubPullRequests';
+import {
+  LIST_OWNER_REPOSITORIES_CHANNEL,
+  LIST_REPOSITORY_OWNERS_CHANNEL,
+  LIST_REPOSITORY_PULL_REQUESTS_CHANNEL,
+} from '../shared/githubPullRequests';
+import type {
+  DesktopListOwnerRepositoriesRequest,
+  DesktopListPullRequestsRequest,
 } from '../shared/githubPullRequests';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
@@ -52,8 +62,20 @@ ipcMain.handle('asahi:get-api-base-url', async () => {
   return server.origin;
 });
 
-ipcMain.handle(LIST_MERGEABLE_PULL_REQUESTS_CHANNEL, () =>
-  listGitHubMergeablePullRequests()
+ipcMain.handle(LIST_REPOSITORY_OWNERS_CHANNEL, () =>
+  listGitHubRepositoryOwners()
+);
+
+ipcMain.handle(
+  LIST_OWNER_REPOSITORIES_CHANNEL,
+  (_event, request: DesktopListOwnerRepositoriesRequest) =>
+    listGitHubOwnerRepositories(request)
+);
+
+ipcMain.handle(
+  LIST_REPOSITORY_PULL_REQUESTS_CHANNEL,
+  (_event, request: DesktopListPullRequestsRequest) =>
+    listGitHubPullRequestsForRepositories(request)
 );
 
 void app.whenReady().then(() => {

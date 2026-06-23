@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReviewUI } from '@asahi/app/components/review-ui';
 import {
   PreloadHighlighter,
@@ -12,6 +13,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { DesktopHomePage } from './DesktopHomePage';
 import { navigateDesktop } from './navigation';
 
+const queryClient = new QueryClient();
+
 interface DesktopLocation {
   domain?: string;
   pathSegments: string[];
@@ -20,14 +23,16 @@ interface DesktopLocation {
 
 export function App() {
   return (
-    <WorkerPoolContext>
-      <ThemeProvider attribute="class">
-        <ScrollbarGutterVariables />
-        <DesktopRouter />
-        <Toaster />
-      </ThemeProvider>
-      <PreloadHighlighter />
-    </WorkerPoolContext>
+    <QueryClientProvider client={queryClient}>
+      <WorkerPoolContext>
+        <ThemeProvider attribute="class">
+          <ScrollbarGutterVariables />
+          <DesktopRouter />
+          <Toaster />
+        </ThemeProvider>
+        <PreloadHighlighter />
+      </WorkerPoolContext>
+    </QueryClientProvider>
   );
 }
 
