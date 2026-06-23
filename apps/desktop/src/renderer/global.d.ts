@@ -1,4 +1,4 @@
-import type { DesktopPullRequestNotificationResult } from '../shared/githubNotifications';
+import type { DesktopPullRequestResult } from '../shared/githubPullRequests';
 
 export {};
 
@@ -6,9 +6,7 @@ declare global {
   interface Window {
     asahi: {
       getApiBaseURL(): Promise<string>;
-      listPullRequestNotifications(): Promise<
-        DesktopPullRequestNotificationResult
-      >;
+      listMergeablePullRequests(): Promise<DesktopPullRequestResult>;
     };
   }
 }

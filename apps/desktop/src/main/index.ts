@@ -4,10 +4,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { getGitHubAuthToken } from './githubAuth';
-import { listGitHubPullRequestNotifications } from './githubNotifications';
+import { listGitHubMergeablePullRequests } from './githubPullRequests';
 import {
-  LIST_GITHUB_PULL_REQUEST_NOTIFICATIONS_CHANNEL,
-} from '../shared/githubNotifications';
+  LIST_MERGEABLE_PULL_REQUESTS_CHANNEL,
+} from '../shared/githubPullRequests';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 let diffServerPromise: Promise<DiffApiServer> | undefined;
@@ -52,8 +52,8 @@ ipcMain.handle('asahi:get-api-base-url', async () => {
   return server.origin;
 });
 
-ipcMain.handle(LIST_GITHUB_PULL_REQUEST_NOTIFICATIONS_CHANNEL, () =>
-  listGitHubPullRequestNotifications()
+ipcMain.handle(LIST_MERGEABLE_PULL_REQUESTS_CHANNEL, () =>
+  listGitHubMergeablePullRequests()
 );
 
 void app.whenReady().then(() => {

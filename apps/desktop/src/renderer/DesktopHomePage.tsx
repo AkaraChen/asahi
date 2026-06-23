@@ -1,14 +1,19 @@
-import { getPatchViewerHref } from '@asahi/app/lib/get-patch-viewer-href';
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { DiffUrlForm } from '@asahi/app/components/diff-url-form';
+import { DiffsHubLogo } from '@asahi/app/components/diffshub-logo';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import type { DesktopPullRequestNotification } from '../shared/githubNotifications';
+import type {
+  DesktopPullRequest,
+  DesktopPullRequestReviewDecision,
+} from '../shared/githubPullRequests';
 import { navigateDesktop } from './navigation';
+import Link from './next-link';
 
-type NotificationState =
+type PullRequestState =
   | { status: 'loading' }
   | {
       status: 'ready';
-      items: DesktopPullRequestNotification[];
+      items: DesktopPullRequest[];
       fetchedAt: string;
     }
   | {
@@ -16,14 +21,17 @@ type NotificationState =
       message: string;
     };
 
-export function DesktopHomePage() {
-  const [state, setState] = useState<NotificationState>({ status: 'loading' });
-  const [manualURL, setManualURL] = useState('');
-  const [manualError, setManualError] = useState<string | null>(null);
+type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
+type UpdatedFilter = 'all' | '24h' | '7d' | '30d';
 
-  const loadNotifications = useCallback(async () => {
+export function DesktopHomePage() {
+  const [state, setState] = useState<PullRequestState>({ status: 'loading' });
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
+  const [updatedFilter, setUpdatedFilter] = useState<UpdatedFilter>('30d');
+
+  const loadPullRequests = useCallback(async () => {
     setState({ status: 'loading' });
-    const result = await window.asahi.listPullRequestNotifications();
+    const result = await window.asahi.listMergeablePullRequests();
     if (result.ok) {
       setState({
         status: 'ready',
@@ -40,134 +48,135 @@ export function DesktopHomePage() {
   }, []);
 
   useEffect(() => {
-    void loadNotifications();
-  }, [loadNotifications]);
+    void loadPullRequests();
+  }, [loadPullRequests]);
 
-  function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const href = getPatchViewerHref(manualURL);
-    if (href == null) {
-      setManualError('Enter a GitHub PR URL or owner/repo#123.');
-      return;
-    }
-
-    setManualError(null);
-    navigateDesktop(href);
-  }
+  const filteredItems = useMemo(
+    () =>
+      state.status === 'ready'
+        ? state.items.filter((item) =>
+            matchesReviewFilter(item.reviewDecision, reviewFilter)
+          ).filter((item) => matchesUpdatedFilter(item.updatedAt, updatedFilter))
+        : [],
+    [reviewFilter, state, updatedFilter]
+  );
 
   return (
-    <main className="bg-background text-foreground flex h-dvh min-h-0 flex-col">
-      <header className="border-border flex items-center justify-between border-b px-6 py-4">
-        <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold">Pull Requests</h1>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {state.status === 'ready'
-              ? `${state.items.length} unread notifications · ${formatDateTime(state.fetchedAt)}`
-              : 'GitHub notifications'}
-          </p>
-        </div>
+    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+      <header className="border-border-opaque bg-[var(--diffshub-sidebar-bg)] z-10 flex flex-wrap items-center gap-2.5 border-b px-3 py-1.5 md:flex-nowrap">
+        <Link
+          href="/"
+          className="inline-flex transition-transform duration-200 hover:scale-110"
+        >
+          <DiffsHubLogo />
+        </Link>
+        <DiffUrlForm
+          className="order-last md:order-none md:mr-auto"
+          placeholder="https://github.com/org/repo/123"
+          inputClassName="w-full md:w-auto"
+        />
+        <label className="sr-only" htmlFor="review-filter">
+          Review filter
+        </label>
+        <select
+          id="review-filter"
+          className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+          value={reviewFilter}
+          onChange={(event) =>
+            setReviewFilter(event.currentTarget.value as ReviewFilter)
+          }
+        >
+          <option value="all">All reviews</option>
+          <option value="pending-review">Pending review</option>
+          <option value="approved">Approved</option>
+          <option value="changes-requested">Changes requested</option>
+        </select>
+        <label className="sr-only" htmlFor="updated-filter">
+          Updated filter
+        </label>
+        <select
+          id="updated-filter"
+          className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+          value={updatedFilter}
+          onChange={(event) =>
+            setUpdatedFilter(event.currentTarget.value as UpdatedFilter)
+          }
+        >
+          <option value="24h">Updated 24h</option>
+          <option value="7d">Updated 7d</option>
+          <option value="30d">Updated 30d</option>
+          <option value="all">All time</option>
+        </select>
         <button
           type="button"
-          className="border-border hover:bg-accent rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+          aria-label="Refresh pull requests"
+          className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-9 items-center justify-center rounded-md border border-transparent transition-colors disabled:opacity-50"
           disabled={state.status === 'loading'}
-          onClick={() => void loadNotifications()}
+          onClick={() => void loadPullRequests()}
         >
-          Refresh
+          <svg
+            aria-hidden="true"
+            className={
+              state.status === 'loading' ? 'size-4 animate-spin' : 'size-4'
+            }
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+            />
+          </svg>
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-6 py-5">
-        <ManualPullRequestForm
-          error={manualError}
-          onSubmit={handleManualSubmit}
-          onURLChange={(value) => {
-            setManualURL(value);
-            if (manualError != null) setManualError(null);
-          }}
-          url={manualURL}
-        />
-
-        <section className="border-border min-h-0 flex-1 overflow-hidden rounded-lg border">
-          {state.status === 'loading' && <LoadingRows />}
-          {state.status === 'error' && (
-            <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
-              <div>
-                <h2 className="text-sm font-medium">Notifications unavailable</h2>
-                <p className="text-muted-foreground mt-1 max-w-md text-sm">
-                  {state.message}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="bg-primary text-primary-foreground hover:opacity-90 rounded-md px-3 py-1.5 text-sm font-medium transition-opacity"
-                onClick={() => void loadNotifications()}
-              >
-                Try again
-              </button>
+      <section className="bg-background min-h-0 overflow-hidden">
+        {state.status === 'loading' && <LoadingRows />}
+        {state.status === 'error' && (
+          <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
+            <div>
+              <h2 className="text-sm font-medium">Pull requests unavailable</h2>
+              <p className="text-muted-foreground mt-1 max-w-md text-sm">
+                {state.message}
+              </p>
             </div>
-          )}
-          {state.status === 'ready' && state.items.length === 0 && (
-            <div className="flex h-full min-h-64 items-center justify-center px-6 text-center">
-              <div>
-                <h2 className="text-sm font-medium">No unread PR notifications</h2>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  Paste a PR above to open it directly.
-                </p>
-              </div>
+            <button
+              type="button"
+              className="hover:bg-accent rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-colors"
+              onClick={() => void loadPullRequests()}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {state.status === 'ready' && filteredItems.length === 0 && (
+          <div className="flex h-full min-h-64 items-center justify-center px-6 text-center">
+            <div>
+              <h2 className="text-sm font-medium">No matching pull requests</h2>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Adjust the filters or paste a PR into the toolbar.
+              </p>
             </div>
-          )}
-          {state.status === 'ready' && state.items.length > 0 && (
-            <ul className="divide-border h-full overflow-auto divide-y">
-              {state.items.map((item) => (
-                <li key={item.id}>
-                  <PullRequestRow item={item} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+          </div>
+        )}
+        {state.status === 'ready' && filteredItems.length > 0 && (
+          <ul className="divide-border h-full overflow-auto divide-y">
+            {filteredItems.map((item) => (
+              <li key={item.id}>
+                <PullRequestRow item={item} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </main>
   );
 }
 
-function ManualPullRequestForm({
-  error,
-  onSubmit,
-  onURLChange,
-  url,
-}: {
-  error: string | null;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onURLChange: (value: string) => void;
-  url: string;
-}) {
-  return (
-    <form className="flex flex-col gap-2" noValidate onSubmit={onSubmit}>
-      <div className="border-border bg-card flex items-center overflow-hidden rounded-lg border">
-        <input
-          className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
-          enterKeyHint="go"
-          onChange={(event) => onURLChange(event.currentTarget.value)}
-          placeholder="owner/repo#123 or GitHub PR URL"
-          spellCheck={false}
-          type="text"
-          value={url}
-        />
-        <button
-          type="submit"
-          className="bg-primary text-primary-foreground mr-1 rounded-md px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
-          disabled={url.trim().length === 0}
-        >
-          Open
-        </button>
-      </div>
-      {error != null && <p className="text-destructive px-1 text-xs">{error}</p>}
-    </form>
-  );
-}
-
-function PullRequestRow({ item }: { item: DesktopPullRequestNotification }) {
+function PullRequestRow({ item }: { item: DesktopPullRequest }) {
   return (
     <button
       type="button"
@@ -175,17 +184,44 @@ function PullRequestRow({ item }: { item: DesktopPullRequestNotification }) {
       onClick={() => navigateDesktop(item.viewerPath)}
     >
       <span className="min-w-0">
-        <span className="text-muted-foreground block truncate text-xs">
+        <span className="text-muted-foreground block truncate font-mono text-xs tracking-tight">
           {item.repository} #{item.number}
         </span>
-        <span className="mt-1 block truncate text-sm font-medium">{item.title}</span>
+        <span className="mt-1 block truncate text-sm font-medium">
+          {item.title}
+        </span>
       </span>
-      <span className="text-muted-foreground flex shrink-0 flex-col items-end gap-1 text-xs">
-        <span>{formatReason(item.reason)}</span>
+      <span className="text-muted-foreground shrink-0 text-xs">
         <span>{formatDateTime(item.updatedAt)}</span>
       </span>
     </button>
   );
+}
+
+function matchesReviewFilter(
+  decision: DesktopPullRequestReviewDecision,
+  filter: ReviewFilter
+): boolean {
+  switch (filter) {
+    case 'pending-review':
+      return decision === 'REVIEW_REQUIRED';
+    case 'approved':
+      return decision === 'APPROVED';
+    case 'changes-requested':
+      return decision === 'CHANGES_REQUESTED';
+    case 'all':
+      return true;
+  }
+}
+
+function matchesUpdatedFilter(value: string, filter: UpdatedFilter): boolean {
+  if (filter === 'all') return true;
+
+  const updatedAt = Date.parse(value);
+  if (Number.isNaN(updatedAt)) return false;
+
+  const hours = filter === '24h' ? 24 : filter === '7d' ? 24 * 7 : 24 * 30;
+  return Date.now() - updatedAt <= hours * 60 * 60 * 1000;
 }
 
 function LoadingRows() {
@@ -193,19 +229,12 @@ function LoadingRows() {
     <div className="divide-border divide-y">
       {Array.from({ length: 8 }, (_, index) => (
         <div className="px-4 py-3" key={index}>
-          <div className="bg-muted h-3 w-36 animate-pulse rounded" />
-          <div className="bg-muted mt-3 h-4 max-w-xl animate-pulse rounded" />
+          <div className="bg-muted h-3 w-36 animate-pulse rounded-sm" />
+          <div className="bg-muted mt-3 h-4 max-w-xl animate-pulse rounded-sm" />
         </div>
       ))}
     </div>
   );
-}
-
-function formatReason(reason: string): string {
-  if (reason === '') {
-    return 'notification';
-  }
-  return reason.replace(/_/g, ' ');
 }
 
 function formatDateTime(value: string): string {

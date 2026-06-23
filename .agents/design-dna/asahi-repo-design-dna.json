@@ -1,0 +1,222 @@
+{
+  "meta": {
+    "name": "Asahi repo design DNA",
+    "description": "Repo-wide page design baseline for Asahi. Extracted from the canonical Next.js homepage and diff viewer, then used as the visual standard for every page in this repo.",
+    "source_references": [
+      "apps/web/app/page.tsx",
+      "apps/web/app/[...path]/page.tsx",
+      "apps/web/app/globals.css",
+      "apps/app/src/pages/home/HomePage.tsx",
+      "apps/app/src/pages/home/HomeFetchForm.tsx",
+      "apps/app/src/components/ReviewUI.tsx",
+      "apps/app/src/components/DiffsHubHeader.tsx",
+      "apps/app/src/components/DiffsHubSidebar.tsx",
+      "apps/app/src/components/DiffsHubViewer.tsx",
+      "excluded-as-source: apps/desktop/src/renderer/DesktopHomePage.tsx"
+    ],
+    "created_at": "2026-06-23"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "monochromatic with semantic red/green diff accents",
+      "primary": { "hex": "#141414", "role": "primary foreground, icons, headings, active controls" },
+      "secondary": { "hex": "#f7f7f7", "role": "page chrome and sidebar background" },
+      "accent": { "hex": "#07c480", "role": "additions, positive diff markers, green status emphasis" },
+      "neutral": {
+        "scale": ["#ffffff", "#f7f7f7", "#f3f3f3", "#e5e5e5", "#71726c", "#4e4f47", "#141414", "#101010"],
+        "usage": "white content surfaces, light gray chrome, muted gray copy, near-black text, optional dark-mode shell"
+      },
+      "semantic": { "success": "#07c480", "warning": "#f5a524", "error": "#ff2e3f", "info": "#4e4f47" },
+      "surface": { "background": "#f7f7f7", "card": "#ffffff", "elevated": "#ffffff" },
+      "contrast_strategy": "dark-on-light dominant with subtle 1px borders; semantic diff colors are pale fills plus saturated side rules/text"
+    },
+    "typography": {
+      "type_scale": {
+        "display": { "size": "24px", "weight": "600", "line_height": "32px", "tracking": "-0.025em" },
+        "heading_1": { "size": "24px", "weight": "600", "line_height": "32px", "tracking": "-0.025em" },
+        "heading_2": { "size": "16px", "weight": "500", "line_height": "24px", "tracking": "0" },
+        "heading_3": { "size": "14px", "weight": "400", "line_height": "20px", "tracking": "0" },
+        "body": { "size": "16px", "weight": "400", "line_height": "24px", "tracking": "0" },
+        "body_small": { "size": "14px", "weight": "400", "line_height": "20px", "tracking": "0" },
+        "caption": { "size": "12px", "weight": "400", "line_height": "16px", "tracking": "0" },
+        "overline": { "size": "10px", "weight": "500", "line_height": "12px", "tracking": "0" }
+      },
+      "font_families": { "heading": "Geist", "body": "Geist", "mono": "Berkeley Mono" },
+      "font_style_notes": "neutral modern sans for UI; compact monospaced code with slight negative tracking for diff readability"
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "scale": ["2px", "4px", "6px", "8px", "12px", "16px", "20px", "24px", "32px", "48px"],
+      "content_density": "comfortable on entry pages, compact/data-dense in work surfaces",
+      "section_rhythm": "quiet entry stacks use 16px clusters and 32px separators; workspaces use tight 6-12px chrome spacing and full-height panes"
+    },
+    "layout": {
+      "grid_system": "single-column centered entry pages; desktop workspaces use 320px sidebar plus flexible main surface",
+      "max_content_width": "672px for focused entry content; full viewport for reviewer/workspace pages",
+      "columns": "1 on entry pages, 2 on desktop workspaces, 1 overlay-style sidebar/main on mobile",
+      "gutter": "8px toolbar gaps, 12px sidebar offsets, 24px entry horizontal padding",
+      "breakpoints": "mobile-first with md around 768px for desktop chrome/grid",
+      "alignment_tendency": "strict grid in workspaces, centered narrow composition on entry pages"
+    },
+    "shape": {
+      "border_radius": { "small": "4px", "medium": "8px", "large": "10px", "pill": "9999px" },
+      "border_usage": "subtle 1px neutral borders on inputs, headers, sidebars, and content separators",
+      "divider_style": "thin neutral hairlines plus semantic red/green diff markers where applicable"
+    },
+    "elevation": {
+      "shadow_style": "mostly none; shadow reserved for dropdowns and mobile overlays",
+      "levels": {
+        "low": "1px border or separator",
+        "medium": "shadow-lg dropdown surface",
+        "high": "mobile overlay shadow 0 16px 32px rgb(0 0 0 / 0.25)"
+      },
+      "depth_cues": "surface contrast, borders, sticky headers, slight overlay blur on mobile"
+    },
+    "iconography": {
+      "style": "small monochrome line/fill product icons",
+      "stroke_weight": "about 1.5-2px",
+      "size_scale": ["12px", "16px", "24px", "36px icon button target"],
+      "preferred_set": "@pierre/icons or existing repo icons"
+    },
+    "motion": {
+      "easing": "ease-out and cubic-bezier(0.32,0.72,0,1)",
+      "duration_scale": { "micro": "150ms", "normal": "200ms", "macro": "300ms" },
+      "entrance_pattern": "subtle fade/zoom/slide for menus and mobile sidebars",
+      "exit_pattern": "reverse fade/zoom/slide with reduced-motion support",
+      "philosophy": "minimal functional"
+    },
+    "components": {
+      "button_style": "ghost icon buttons or direct text buttons, 32-36px square/compact, 8px radius, muted foreground with hover background/text shift",
+      "input_style": "transparent text input inside rounded 1px bordered shell; 48px entry height and 36px compact workspace height",
+      "card_style": "avoid marketing cards; use plain work panes and list rows with subtle borders",
+      "navigation_pattern": "top toolbar for primary actions; persistent sidebar or summary rail for workspace context",
+      "modal_style": "rounded bordered popover/dropdown, white or themed surface, shadow-lg; mobile sidebar uses bottom sheet behavior",
+      "list_style": "dense rows with muted metadata, truncation, semantic status marks, and scroll containment",
+      "component_notes": "primary experiences should feel like a fast code-review tool, not a landing page or dashboard kit"
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": ["quiet", "precise", "technical", "fast"],
+      "visual_metaphor": "the code diff and review workflow are the brand language",
+      "era_influence": "modern GitHub-adjacent developer tooling with shadcn/Tailwind restraint",
+      "genre": "developer productivity / code review tool",
+      "personality_traits": ["meticulous", "terse", "practical", "performance-minded"],
+      "adjectives": ["minimal", "monochrome", "dense", "crisp", "utilitarian"]
+    },
+    "visual_language": {
+      "complexity": "moderate",
+      "ornamentation": "subtle semantic accents only",
+      "whitespace_usage": "quiet whitespace for entry pages, dense organization for work surfaces",
+      "visual_weight_distribution": "light chrome; data, code, and lists carry most visual mass",
+      "focal_strategy": "entry pages focus on a single input/action; workspace pages focus on scan and selection",
+      "contrast_level": "medium-high for text, low for chrome",
+      "texture_usage": "semantic stripes/hatches only when representing diff states"
+    },
+    "composition": {
+      "hierarchy_method": "spatial isolation, type weight, functional pane layout, and muted metadata",
+      "balance_type": "centered on entry pages, asymmetric workspace on data pages",
+      "flow_direction": "entry pages top-to-bottom; workspaces left-to-right from context to detail",
+      "grouping_strategy": "toolbars, sidebars, lists, and content panes grouped by borders and spacing",
+      "negative_space_role": "calms entry pages and keeps dense work surfaces readable"
+    },
+    "imagery": {
+      "photo_treatment": "none",
+      "illustration_style": "none",
+      "graphic_elements": "logo, file/status icons, red/green semantic markers, line numbers, compact metadata",
+      "pattern_usage": "semantic hatch/stripe patterns only",
+      "image_shape": "not image-led; UI surfaces are rectangular with small radii"
+    },
+    "interaction_feel": {
+      "feedback_style": "immediate, low-noise hover/focus/pressed states",
+      "hover_behavior": "muted controls gain subtle background or foreground contrast; no decorative motion",
+      "transition_personality": "snappy and restrained",
+      "loading_style": "functional status rows or skeleton rows, not decorative",
+      "microinteraction_density": "moderate in toolbars/sidebars, low on entry pages"
+    },
+    "brand_voice_in_ui": {
+      "tone": "direct developer-facing with a small informal edge",
+      "formality": "semi-formal",
+      "cta_style": "utility-first action rather than marketing CTA",
+      "empty_state_approach": "plain instructional text",
+      "error_tone": "practical and recoverable"
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "subtle-accent",
+      "performance_tier": "lightweight",
+      "fallback_strategy": "reduce to static CSS surfaces and instant state changes",
+      "primary_technology": "CSS, SVG icons, virtualized React surfaces where needed"
+    },
+    "background_effects": {
+      "type": "none",
+      "description": "solid themed backgrounds only",
+      "technology": "CSS custom properties",
+      "params": { "color_palette": "#f7f7f7/#ffffff/#101010", "speed": "none", "density": "none", "opacity": "1", "blend_mode": "normal" }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "none",
+      "description": "not part of the repo visual language",
+      "technology": "none",
+      "params": { "count": "0", "shape": "none", "size_range": "none", "movement_pattern": "none", "color_behavior": "none", "interaction": "none", "spawn_area": "none" }
+    },
+    "3d_elements": {
+      "enabled": false,
+      "type": "none",
+      "description": "not part of the repo visual language",
+      "technology": "none",
+      "params": { "renderer": "none", "lighting": "none", "camera": "none", "materials": "none", "geometry": "none", "post_processing": ["none"], "interaction_model": "none" }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "not part of the repo visual language",
+      "technology": "none",
+      "params": { "uniforms": "none", "vertex_manipulation": "none", "fragment_output": "none", "noise_type": "none", "distortion": "none" }
+    },
+    "scroll_effects": {
+      "parallax": { "enabled": false, "layers": "0", "depth_range": "none", "speed_curve": "none" },
+      "scroll_triggered_animations": { "enabled": false, "trigger_points": "none", "animation_type": "none", "scrub_behavior": "none" },
+      "scroll_morphing": { "enabled": false, "description": "not present; use contained scrolling and sticky chrome instead" }
+    },
+    "text_effects": {
+      "type": "semantic-code-and-status-coloring",
+      "description": "text can be enhanced by code/status colors and compact metadata, not animated typography",
+      "technology": "CSS/theme rendering",
+      "params": { "split_strategy": "by-line or row", "animation_per_unit": "none", "stagger": "none", "effect_style": "static semantic coloring" }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "not part of the repo visual language",
+      "params": { "shape": "system cursor", "size": "default", "blend_mode": "normal", "trail": "none", "interaction_zone": "none" }
+    },
+    "image_effects": {
+      "type": "none",
+      "description": "repo pages are not image-led",
+      "technology": "none",
+      "params": { "filter_pipeline": "none", "hover_transform": "none", "reveal_animation": "none", "distortion_type": "none" }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": true,
+      "style": "subtle frosted mobile overlay only",
+      "params": { "blur_radius": "xs", "transparency": "background/60", "border_treatment": "1px neutral", "shadow_type": "mobile overlay shadow", "light_source_angle": "none" }
+    },
+    "canvas_drawings": {
+      "enabled": false,
+      "type": "none",
+      "description": "not part of the repo visual language",
+      "technology": "none",
+      "params": { "draw_method": "none", "animation_loop": "none", "color_scheme": "none", "responsiveness": "none", "interaction": "none" }
+    },
+    "svg_animations": {
+      "enabled": false,
+      "type": "static-icons",
+      "description": "SVG icons may be present but should not be animated",
+      "params": { "animation_method": "none", "path_morphing": "none", "stroke_animation": "none", "filter_effects": "none" }
+    },
+    "composite_notes": "Avoid decorative web effects. The repo-wide feel comes from precise layout, restrained chrome, compact data rows, sticky/contained work surfaces, and semantic red/green state markers."
+  }
+}

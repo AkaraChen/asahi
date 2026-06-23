@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./components/diff-url-form": "./src/components/DiffUrlForm.tsx",
+    "./components/diffshub-logo": "./src/components/DiffsHubLogo.tsx",
     "./components/review-ui": "./src/components/ReviewUI.tsx",
     "./layout": "./src/layout.ts",
     "./lib/get-patch-viewer-href": "./src/lib/getPatchViewerHref.ts",
