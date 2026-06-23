@@ -377,10 +377,6 @@ function RepositoryDialog({
                       <span className="block truncate text-sm">
                         {repository.name}
                       </span>
-                      <span className="text-muted-foreground mt-1 block truncate text-xs">
-                        Active {repository.activePullRequestCount} · Closed{' '}
-                        {repository.closedPullRequestCount}
-                      </span>
                     </span>
                     <Switch
                       aria-label={`Select ${repository.name}`}

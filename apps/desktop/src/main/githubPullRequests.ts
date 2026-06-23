@@ -50,43 +50,19 @@ const PULL_REQUESTS_QUERY = `
   }
 `;
 
-const OWNER_REPOSITORIES_QUERY = `
-  query($owner: String!, $after: String) {
-    repositoryOwner(login: $owner) {
-      repositories(
-        first: 100
-        after: $after
-        ownerAffiliations: OWNER
-        orderBy: { field: PUSHED_AT, direction: DESC }
-      ) {
-        pageInfo { endCursor hasNextPage }
-        nodes {
-          id
-          name
-          nameWithOwner
-          isPrivate
-          viewerPermission
-          activePullRequests: pullRequests(states: OPEN) { totalCount }
-          closedPullRequests: pullRequests(states: [CLOSED, MERGED]) {
-            totalCount
-          }
-        }
-      }
-    }
-  }
-`;
-
 type PageInfo = { endCursor: string | null; hasNextPage: boolean };
 type GitHubPermission = DesktopRepositoryPermission | 'READ' | 'TRIAGE';
 
-type GitHubRepository = {
+type GitHubRestRepository = {
   id: string;
   name: string;
-  nameWithOwner: string;
-  isPrivate: boolean;
-  viewerPermission: GitHubPermission;
-  activePullRequests: { totalCount: number };
-  closedPullRequests: { totalCount: number };
+  full_name: string;
+  private: boolean;
+  permissions?: {
+    admin?: boolean;
+    maintain?: boolean;
+    push?: boolean;
+  };
 };
 
 type PullRequestNode = Omit<
@@ -134,7 +110,7 @@ export async function listGitHubOwnerRepositories(
   request: DesktopListOwnerRepositoriesRequest
 ): Promise<DesktopRepositoriesResult> {
   try {
-    const repositories = await loadOwnerRepositories(request.owner);
+    const repositories = await loadOwnerRepositories(request);
     const items = repositories
       .map(toDesktopRepository)
       .filter((repository) => repository != null);
@@ -148,31 +124,16 @@ export async function listGitHubOwnerRepositories(
   }
 }
 
-async function loadOwnerRepositories(owner: string): Promise<GitHubRepository[]> {
-  const items: GitHubRepository[] = [];
-  let after: string | undefined;
-
-  for (;;) {
-    const response = await graphql<{
-      data: {
-        repositoryOwner: {
-          repositories: {
-            pageInfo: PageInfo;
-            nodes: GitHubRepository[];
-          };
-        } | null;
-      };
-    }>(OWNER_REPOSITORIES_QUERY, { owner, after });
-    const repositories = response.data.repositoryOwner?.repositories;
-    if (repositories == null) return items;
-
-    items.push(...repositories.nodes);
-    if (!repositories.pageInfo.hasNextPage) break;
-    after = repositories.pageInfo.endCursor ?? undefined;
-    if (after == null) break;
-  }
-
-  return items;
+async function loadOwnerRepositories(
+  request: DesktopListOwnerRepositoriesRequest
+): Promise<GitHubRestRepository[]> {
+  const endpoint =
+    request.ownerType === 'personal'
+      ? 'user/repos?affiliation=owner&visibility=all&sort=pushed'
+      : `orgs/${encodeURIComponent(
+          request.owner
+        )}/repos?type=all&sort=pushed`;
+  return rest<GitHubRestRepository[]>(endpoint);
 }
 
 export async function listGitHubPullRequestsForRepositories(
@@ -247,28 +208,33 @@ async function loadPullRequestsForRepository(
 }
 
 export function toDesktopRepository(
-  repository: GitHubRepository
+  repository: GitHubRestRepository
 ): DesktopRepository | undefined {
-  if (
-    repository.viewerPermission !== 'WRITE' &&
-    repository.viewerPermission !== 'MAINTAIN' &&
-    repository.viewerPermission !== 'ADMIN'
-  ) {
+  const viewerPermission = toDesktopRepositoryPermission(
+    repository.permissions
+  );
+  if (viewerPermission == null) {
     return undefined;
   }
-  const viewerPermission = repository.viewerPermission;
-  const [owner] = repository.nameWithOwner.split('/');
+  const [owner] = repository.full_name.split('/');
 
   return {
     id: repository.id,
     owner,
     name: repository.name,
-    nameWithOwner: repository.nameWithOwner,
-    isPrivate: repository.isPrivate,
-    activePullRequestCount: repository.activePullRequests.totalCount,
-    closedPullRequestCount: repository.closedPullRequests.totalCount,
+    nameWithOwner: repository.full_name,
+    isPrivate: repository.private,
     viewerPermission,
   };
+}
+
+function toDesktopRepositoryPermission(
+  permissions: GitHubRestRepository['permissions']
+): DesktopRepositoryPermission | undefined {
+  if (permissions?.admin) return 'ADMIN';
+  if (permissions?.maintain) return 'MAINTAIN';
+  if (permissions?.push) return 'WRITE';
+  return undefined;
 }
 
 export function toDesktopPullRequest(

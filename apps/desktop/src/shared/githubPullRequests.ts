@@ -26,8 +26,6 @@ export interface DesktopRepository {
   name: string;
   nameWithOwner: string;
   isPrivate: boolean;
-  activePullRequestCount: number;
-  closedPullRequestCount: number;
   viewerPermission: DesktopRepositoryPermission;
 }
 

@@ -10,12 +10,10 @@ describe('githubPullRequests', () => {
     expect(
       toDesktopRepository({
         id: 'repo-id',
-        isPrivate: true,
         name: 'repo',
-        nameWithOwner: 'owner/repo',
-        viewerPermission: 'WRITE',
-        activePullRequests: { totalCount: 3 },
-        closedPullRequests: { totalCount: 9 },
+        full_name: 'owner/repo',
+        private: true,
+        permissions: { push: true },
       })
     ).toEqual({
       id: 'repo-id',
@@ -23,8 +21,6 @@ describe('githubPullRequests', () => {
       name: 'repo',
       nameWithOwner: 'owner/repo',
       owner: 'owner',
-      activePullRequestCount: 3,
-      closedPullRequestCount: 9,
       viewerPermission: 'WRITE',
     });
   });

@@ -2,6 +2,7 @@
 
 import {
   IconComment,
+  IconFileRichText,
   IconFileTree,
   IconFilter,
   IconSearch,
@@ -52,7 +53,7 @@ import type {
   DiffsHubSavedCommentItem,
 } from '../lib/types';
 
-type SidebarTab = 'files' | 'comments';
+type SidebarTab = 'files' | 'comments' | 'body';
 type SidebarStatusPanel = 'diffStats' | 'systemMonitor';
 
 const MOBILE_MEDIA_QUERY = '(max-width: 767px)';
@@ -259,6 +260,16 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
                 </span>
               )}
             </ButtonGroupItem>
+            {desktopPrBody != null && desktopPrBody.trim() !== '' && (
+              <ButtonGroupItem
+                value="body"
+                size="icon-only"
+                className="shadow-none"
+              >
+                <IconFileRichText className="size-4 md:size-3" />
+                <span className="sr-only">PR body</span>
+              </ButtonGroupItem>
+            )}
           </ButtonGroup>
           {activeTab === 'files' && fileTreeModel != null && (
             <FileTreeSearchToggle model={fileTreeModel} />
@@ -285,15 +296,6 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
             </Button>
           )}
         </div>
-        {desktopPrBody != null && desktopPrBody.trim() !== '' ? (
-          <section className="mx-3 mb-2 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-2 text-[12px] text-[var(--color-foreground)]">
-            <h2 className="mb-1 font-medium">PR body</h2>
-            <div
-              className="prose prose-sm max-h-40 min-h-0 overflow-auto text-[12px] text-[var(--color-foreground)]"
-              dangerouslySetInnerHTML={{ __html: desktopPrBody }}
-            />
-          </section>
-        ) : null}
         <div className="mt-3 min-h-0 flex-1">
           <div
             role="region"
@@ -320,6 +322,19 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
               onSelectItem={onSelectItem}
             />
           </div>
+          {desktopPrBody != null && desktopPrBody.trim() !== '' && (
+            <div
+              role="region"
+              aria-label="PR body"
+              hidden={activeTab !== 'body'}
+              className="h-full min-h-0 overflow-auto px-3 py-2 text-xs text-[var(--diffshub-sidebar-fg,var(--color-foreground))]"
+            >
+              <div
+                className="max-w-none text-sm leading-6 text-inherit [&_a]:text-inherit [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-[color-mix(in_srgb,currentColor_28%,transparent)] [&_blockquote]:pl-3 [&_blockquote]:text-[color-mix(in_srgb,currentColor_70%,transparent)] [&_code]:rounded-sm [&_code]:bg-[color-mix(in_srgb,currentColor_10%,transparent)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_h1]:mb-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:font-semibold [&_img]:max-w-full [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded [&_pre]:bg-[color-mix(in_srgb,currentColor_10%,transparent)] [&_pre]:p-2 [&_pre]:text-xs [&_table]:my-2 [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_td]:border [&_td]:border-[color-mix(in_srgb,currentColor_18%,transparent)] [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-[color-mix(in_srgb,currentColor_18%,transparent)] [&_th]:px-2 [&_th]:py-1 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5"
+                dangerouslySetInnerHTML={{ __html: desktopPrBody }}
+              />
+            </div>
+          )}
         </div>
         {debugMode ? (
           <>
