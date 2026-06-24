@@ -16,6 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { getGitHubAuthToken } from './githubAuth';
+import { installDesktopCliPath } from './cliPath';
 import {
   DESKTOP_CLOSE_VIEWER_TAB_CHANNEL,
   DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL,
@@ -31,6 +32,8 @@ import type {
 } from '../shared/desktopTabs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
+installDesktopCliPath();
+
 const diffApiAccessToken = randomBytes(32).toString('base64url');
 let diffServerPromise: Promise<DiffApiServer> | undefined;
 const viewerTabs = new Map<string, WebContentsView>();
