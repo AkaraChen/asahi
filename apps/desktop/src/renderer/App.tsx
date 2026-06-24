@@ -290,7 +290,7 @@ function HomeTabButton({
       aria-label="Home"
       className={
         active
-          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--color-primary)] after:content-[""]'
+          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-px after:h-0 after:outline-2 after:outline-[var(--color-primary)] after:content-[""]'
           : 'flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
       }
       onClick={onClick}
@@ -315,7 +315,7 @@ function TabButton({
       <div
         className={
           active
-            ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[var(--color-primary)] after:content-[""]'
+            ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-px after:h-0 after:outline-2 after:outline-[var(--color-primary)] after:content-[""]'
             : 'hover:bg-[var(--color-accent)] flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border)] hover:text-[var(--color-foreground)]'
         }
       >
