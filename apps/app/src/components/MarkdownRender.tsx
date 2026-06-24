@@ -1,36 +1,139 @@
 'use client';
 
-import { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 
 import { cn } from '../lib/cn';
-import { renderMarkdownToHtml } from '../lib/renderMarkdownToHtml';
 
 interface MarkdownRenderProps {
   className?: string;
   markdown: string;
 }
 
-export function MarkdownRender({ className, markdown }: MarkdownRenderProps) {
-  const html = useMemo(() => renderMarkdownToHtml(markdown), [markdown]);
+const markdownComponents: Components = {
+  a({ className, ...props }) {
+    return (
+      <a
+        className={cn('underline underline-offset-2', className)}
+        {...props}
+      />
+    );
+  },
+  blockquote({ className, ...props }) {
+    return (
+      <blockquote
+        className={cn(
+          'my-2 border-l-2 border-[color-mix(in_srgb,currentColor_28%,transparent)] pl-3 text-[color-mix(in_srgb,currentColor_70%,transparent)]',
+          className
+        )}
+        {...props}
+      />
+    );
+  },
+  del({ className, ...props }) {
+    return <del className={cn('line-through', className)} {...props} />;
+  },
+  code({ className, ...props }) {
+    return (
+      <code
+        className={cn(
+          'rounded-sm bg-[color-mix(in_srgb,currentColor_10%,transparent)] px-1 py-0.5 font-mono',
+          className
+        )}
+        {...props}
+      />
+    );
+  },
+  h1({ className, ...props }) {
+    return (
+      <h1
+        className={cn('mb-2 text-base font-semibold', className)}
+        {...props}
+      />
+    );
+  },
+  h2({ className, ...props }) {
+    return (
+      <h2 className={cn('mb-2 text-sm font-semibold', className)} {...props} />
+    );
+  },
+  h3({ className, ...props }) {
+    return <h3 className={cn('mb-1 font-semibold', className)} {...props} />;
+  },
+  img({ className, ...props }) {
+    return <img className={cn('max-w-full', className)} {...props} />;
+  },
+  li({ className, ...props }) {
+    return <li className={cn('my-1', className)} {...props} />;
+  },
+  ol({ className, ...props }) {
+    return (
+      <ol className={cn('my-2 list-decimal pl-5', className)} {...props} />
+    );
+  },
+  p({ className, ...props }) {
+    return <p className={cn('my-1', className)} {...props} />;
+  },
+  pre({ className, ...props }) {
+    return (
+      <pre
+        className={cn(
+          'my-2 rounded bg-[color-mix(in_srgb,currentColor_10%,transparent)] p-2 text-xs',
+          className
+        )}
+        {...props}
+      />
+    );
+  },
+  table({ className, ...props }) {
+    return <table className={cn('my-2', className)} {...props} />;
+  },
+  sub({ className, ...props }) {
+    return <sub className={cn('text-[0.75em]', className)} {...props} />;
+  },
+  sup({ className, ...props }) {
+    return <sup className={cn('text-[0.75em]', className)} {...props} />;
+  },
+  td({ className, ...props }) {
+    return (
+      <td
+        className={cn(
+          'border border-[color-mix(in_srgb,currentColor_18%,transparent)] px-2 py-1',
+          className
+        )}
+        {...props}
+      />
+    );
+  },
+  th({ className, ...props }) {
+    return (
+      <th
+        className={cn(
+          'border border-[color-mix(in_srgb,currentColor_18%,transparent)] px-2 py-1',
+          className
+        )}
+        {...props}
+      />
+    );
+  },
+  ul({ className, ...props }) {
+    return <ul className={cn('my-2 list-disc pl-5', className)} {...props} />;
+  },
+};
 
+export function MarkdownRender({ className, markdown }: MarkdownRenderProps) {
   return (
-    <div
-      className={cn(
-        'text-sm leading-6',
-        '[&_a]:underline [&_a]:underline-offset-2',
-        '[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-[color-mix(in_srgb,currentColor_28%,transparent)] [&_blockquote]:pl-3 [&_blockquote]:text-[color-mix(in_srgb,currentColor_70%,transparent)]',
-        '[&_code]:rounded-sm [&_code]:bg-[color-mix(in_srgb,currentColor_10%,transparent)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono',
-        '[&_h1]:mb-2 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:font-semibold',
-        '[&_img]:max-w-full',
-        '[&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1',
-        '[&_pre]:my-2 [&_pre]:rounded [&_pre]:bg-[color-mix(in_srgb,currentColor_10%,transparent)] [&_pre]:p-2 [&_pre]:text-xs',
-        '[&_table]:my-2',
-        '[&_td]:border [&_td]:border-[color-mix(in_srgb,currentColor_18%,transparent)] [&_td]:px-2 [&_td]:py-1',
-        '[&_th]:border [&_th]:border-[color-mix(in_srgb,currentColor_18%,transparent)] [&_th]:px-2 [&_th]:py-1',
-        '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-        className
-      )}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={cn('text-sm leading-6', className)}>
+      <ReactMarkdown
+        components={markdownComponents}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        remarkPlugins={[remarkGfm]}
+      >
+        {markdown}
+      </ReactMarkdown>
+    </div>
   );
 }
