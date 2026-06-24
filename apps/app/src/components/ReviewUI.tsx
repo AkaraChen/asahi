@@ -9,9 +9,11 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
+import { toast } from 'sonner';
 
 import { DiffsHubHeader } from './DiffsHubHeader';
 import { DiffsHubSidebar } from './DiffsHubSidebar';
@@ -32,7 +34,13 @@ import type {
   DiffsHubDeletedCommentEvent,
   DiffsHubSavedCommentEntry,
   DiffsHubSavedCommentEvent,
+  DiffsHubThreadSidebarEntry,
+  DiffsHubThreadSidebarItem,
+  GitHubCommentAuthor,
+  GitHubInlineCommentsClient,
+  GitHubInlineThread,
 } from '../lib/types';
+import { rangeFromGitHubAnchor } from '../lib/githubInlineThreadAnchor';
 import { upsertSavedCommentSidebarEntry } from '../lib/upsertSavedCommentSidebarEntry';
 
 interface ReviewUIProps {
@@ -41,6 +49,7 @@ interface ReviewUIProps {
   desktopPrOwnerAvatarUrl?: string;
   desktopPrBody?: string;
   desktopPrTitle?: string;
+  githubComments?: GitHubInlineCommentsClient;
   path: string;
 }
 
@@ -54,6 +63,7 @@ export function ReviewUI({
   desktopPrOwnerAvatarUrl,
   desktopPrBody,
   desktopPrTitle,
+  githubComments,
   path,
 }: ReviewUIProps) {
   // Provide the diffshub-scoped theme context, then render the body BELOW it so
@@ -65,6 +75,7 @@ export function ReviewUI({
         desktopPrOwnerAvatarUrl={desktopPrOwnerAvatarUrl}
         desktopPrBody={desktopPrBody}
         desktopPrTitle={desktopPrTitle}
+        githubComments={githubComments}
         initialUrl={initialUrl}
         path={path}
       />
@@ -78,6 +89,7 @@ function ReviewUIInner({
   desktopPrOwnerAvatarUrl,
   desktopPrBody,
   desktopPrTitle,
+  githubComments,
   path,
 }: ReviewUIProps) {
   useEffect(preloadAvatars, []);
@@ -94,6 +106,10 @@ function ReviewUIInner({
   const [lineNumbers, setLineNumbers] = useState(true);
   const [debugMode, setDebugMode] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [githubThreads, setGitHubThreads] = useState<GitHubInlineThread[]>([]);
+  const [githubViewer, setGitHubViewer] = useState<GitHubCommentAuthor | null>(
+    null
+  );
   // All theming state — color mode and the light/dark theme-name picks — lives
   // in the single @pierre/theming controller (the same instance the app-wide
   // ThemeProvider is bound to). Reading it here means picking Auto/Light/Dark
@@ -172,6 +188,41 @@ function ReviewUIInner({
     path,
     viewerRef,
   });
+
+  const refreshFullPrView = useCallback(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    viewerRef.current?.clearSelectedLines();
+    setGitHubThreads([]);
+    retryLoad();
+  }, [retryLoad]);
+
+  useEffect(() => {
+    if (githubComments == null || loadState !== 'ready') {
+      setGitHubThreads([]);
+      return;
+    }
+
+    let cancelled = false;
+    void githubComments.listThreads().then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        toast.error(result.message);
+        setGitHubThreads([]);
+        return;
+      }
+      setGitHubThreads(result.items);
+      setGitHubViewer(result.viewer);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [githubComments, loadState, viewerKey]);
+  const threadSections = useMemo(
+    () =>
+      buildGitHubThreadSidebarSections(githubThreads, commentFileByItemId),
+    [commentFileByItemId, githubThreads]
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 767px)');
@@ -271,6 +322,48 @@ function ReviewUIInner({
     },
     []
   );
+  const handleSelectThread = useCallback(
+    (thread: DiffsHubThreadSidebarEntry) => {
+      setFileTreeOverlayOpen(false);
+      const viewer = viewerRef.current;
+      if (viewer == null) {
+        return;
+      }
+      const item = viewer.getItem(thread.itemId);
+      if (item == null) {
+        return;
+      }
+      if (item.collapsed === true) {
+        item.collapsed = false;
+        item.version = typeof item.version === 'number' ? item.version + 1 : 1;
+        viewer.updateItem(item);
+      }
+
+      if (thread.anchor.kind === 'file') {
+        viewer.clearSelectedLines();
+        viewer.scrollTo({
+          type: 'item',
+          id: thread.itemId,
+          align: 'start',
+          behavior: 'smooth',
+        });
+        return;
+      }
+
+      viewer.setSelectedLines({
+        id: thread.itemId,
+        range: thread.range,
+      });
+      viewer.scrollTo({
+        type: 'range',
+        id: thread.itemId,
+        range: thread.range,
+        align: 'center',
+        behavior: 'smooth-auto',
+      });
+    },
+    []
+  );
   // Withhold the viewer until the persisted themes have been read from
   // localStorage. Otherwise on client-side navigation back into a diff the
   // CodeView would mount during the brief render where lightThemeName/darkThemeName
@@ -301,6 +394,7 @@ function ReviewUIInner({
         fileTreeAvailable={treeSource != null}
         onToggleCollapseMode={handleToggleCollapseMode}
         onToggleFileTreeOverlay={handleToggleFileTreeOverlay}
+        onRefresh={refreshFullPrView}
         setColorMode={setColorMode}
         setDarkThemeName={setDarkThemeName}
         setDebugMode={setDebugMode}
@@ -321,11 +415,13 @@ function ReviewUIInner({
             desktopPrBody={desktopPrBody}
             debugMode={debugMode}
             diffStats={diffStats}
+            threadSections={githubComments == null ? undefined : threadSections}
             sidebarWidth={sidebarWidth}
             onSidebarResizeStart={handleSidebarResizeStart}
             mobileOverlayOpen={fileTreeOverlayOpen}
             onMobileClose={handleCloseFileTreeOverlay}
             onSelectComment={handleSelectComment}
+            onSelectThread={handleSelectThread}
             scrollRef={scrollRef}
             source={treeSource}
             streaming={loadState === 'streaming'}
@@ -337,6 +433,10 @@ function ReviewUIInner({
             className="[grid-area:viewer]"
             diffStyle={diffStyle}
             defaultCommentAuthorAvatarUrl={desktopPrOwnerAvatarUrl}
+            commentFileByItemId={commentFileByItemId}
+            githubComments={githubComments}
+            githubThreads={githubThreads}
+            githubViewer={githubViewer}
             overflow={overflow}
             showBackgrounds={showBackgrounds}
             diffIndicators={diffIndicators}
@@ -360,6 +460,84 @@ function ReviewUIInner({
       )}
     </ReviewGrid>
   );
+}
+
+function buildGitHubThreadSidebarSections(
+  threads: readonly GitHubInlineThread[],
+  itemIdToFile: ReadonlyMap<string, { fileOrder: number; path: string }> | null
+): DiffsHubThreadSidebarItem[] {
+  if (itemIdToFile == null || threads.length === 0) {
+    return [];
+  }
+
+  const pathToFile = new Map<
+    string,
+    { fileOrder: number; itemId: string; path: string }
+  >();
+  for (const [itemId, file] of itemIdToFile) {
+    pathToFile.set(file.path, { ...file, itemId });
+  }
+
+  const sections = new Map<string, DiffsHubThreadSidebarItem>();
+  for (const thread of threads) {
+    const file = pathToFile.get(thread.anchor.path);
+    const range = rangeFromGitHubAnchor(thread.anchor);
+    const firstComment = thread.comments[0];
+    if (file == null || range == null || firstComment == null) {
+      continue;
+    }
+
+    const side = range.endSide ?? range.side;
+    const entry: DiffsHubThreadSidebarEntry = {
+      anchor:
+        thread.anchor.kind === 'file' || side == null
+          ? { kind: 'file' }
+          : {
+              kind: 'line',
+              lineNumber: range.end,
+              side,
+            },
+      author: firstComment.author.login,
+      avatarUrl: firstComment.author.avatarUrl,
+      body: firstComment.body,
+      commentCount: thread.comments.length,
+      fileOrder: file.fileOrder,
+      isResolved: thread.isResolved,
+      itemId: file.itemId,
+      key: thread.id,
+      path: file.path,
+      range,
+      thread,
+    };
+
+    const section = sections.get(file.itemId);
+    if (section == null) {
+      sections.set(file.itemId, {
+        fileOrder: file.fileOrder,
+        itemId: file.itemId,
+        path: file.path,
+        threads: [entry],
+      });
+    } else {
+      section.threads.push(entry);
+    }
+  }
+
+  return [...sections.values()]
+    .map((section) => ({
+      ...section,
+      threads: [...section.threads].sort(compareThreadSidebarEntries),
+    }))
+    .sort((a, b) => a.fileOrder - b.fileOrder || a.path.localeCompare(b.path));
+}
+
+function compareThreadSidebarEntries(
+  a: DiffsHubThreadSidebarEntry,
+  b: DiffsHubThreadSidebarEntry
+): number {
+  const aLine = a.anchor.kind === 'line' ? a.anchor.lineNumber : 0;
+  const bLine = b.anchor.kind === 'line' ? b.anchor.lineNumber : 0;
+  return aLine - bLine || a.key.localeCompare(b.key);
 }
 
 function useIsWorkerPoolReadyOrDisabled() {

@@ -5,11 +5,14 @@ import { IconConvoFill, IconPlus } from '@pierre/icons';
 import { memo, type MouseEvent } from 'react';
 
 import { CommentAuthorAvatar } from './CommentAuthorAvatar';
+import { MarkdownRender } from './MarkdownRender';
 import { cn } from '../lib/cn';
 import type {
   CommentLineType,
   DiffsHubSavedCommentEntry,
   DiffsHubSavedCommentItem,
+  DiffsHubThreadSidebarEntry,
+  DiffsHubThreadSidebarItem,
 } from '../lib/types';
 
 interface DiffsHubCommentsListProps {
@@ -17,6 +20,8 @@ interface DiffsHubCommentsListProps {
   defaultCommentAuthorAvatarUrl?: string;
   onSelectComment?(comment: DiffsHubSavedCommentEntry): void;
   onSelectItem?(itemId: string): void;
+  onSelectThread?(thread: DiffsHubThreadSidebarEntry): void;
+  threadSections?: readonly DiffsHubThreadSidebarItem[];
 }
 
 function getCommentLineLabel(
@@ -46,6 +51,25 @@ function getCommentLineClassName(
   // on a dark card). The Tailwind shades stay as fallbacks for the
   // first-render window before the chrome style applies.
   return side === 'additions'
+    ? 'text-[var(--diffshub-comment-add-fg,#047857)] dark:text-[var(--diffshub-comment-add-fg,#34d399)]'
+    : 'text-[var(--diffshub-comment-del-fg,#be123c)] dark:text-[var(--diffshub-comment-del-fg,#fb7185)]';
+}
+
+function getThreadAnchorLabel(anchor: DiffsHubThreadSidebarEntry['anchor']): string {
+  if (anchor.kind === 'file') {
+    return 'File';
+  }
+  const sigil = anchor.side === 'additions' ? '+' : '-';
+  return `Line ${sigil}${anchor.lineNumber}`;
+}
+
+function getThreadAnchorClassName(
+  anchor: DiffsHubThreadSidebarEntry['anchor']
+): string {
+  if (anchor.kind === 'file') {
+    return 'text-muted-foreground';
+  }
+  return anchor.side === 'additions'
     ? 'text-[var(--diffshub-comment-add-fg,#047857)] dark:text-[var(--diffshub-comment-add-fg,#34d399)]'
     : 'text-[var(--diffshub-comment-del-fg,#be123c)] dark:text-[var(--diffshub-comment-del-fg,#fb7185)]';
 }
@@ -83,7 +107,101 @@ export const DiffsHubCommentsList = memo(function DiffsHubCommentsList({
   defaultCommentAuthorAvatarUrl,
   onSelectComment,
   onSelectItem,
+  onSelectThread,
+  threadSections,
 }: DiffsHubCommentsListProps) {
+  if (threadSections != null) {
+    if (threadSections.length === 0) {
+      return (
+        <div className="text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center gap-2 px-7 text-center text-sm">
+          <IconConvoFill size={24} className="mb-2" />
+          <div className="flex flex-col">
+            <strong className="font-medium">No threads yet</strong>
+            <p>
+              Hover over a line and click the{' '}
+              <span className="light:text-white light:bg-[rgb(0,159,255)] inline-flex h-[20px] w-[20px] items-center justify-center rounded-[4px] align-top dark:bg-[rgb(0,159,255)] dark:text-black">
+                <IconPlus />
+              </span>{' '}
+              button to add GitHub inline threads.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={cn(
+          'cv-mini-scrollbar',
+          'h-full min-h-0 overflow-auto overscroll-contain pl-3 pb-3 pr-[max(0px,calc(12px-var(--cv-mini-gutter-vertical)))]'
+        )}
+      >
+        {threadSections.map((section) => (
+          <section key={section.itemId}>
+            {onSelectItem != null ? (
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring block w-full cursor-pointer p-3 pb-2 text-left text-sm font-medium break-all outline-none focus-visible:ring-2"
+                onClick={(event) =>
+                  handleRowClick(event, () => onSelectItem(section.itemId))
+                }
+              >
+                <span className="select-text">{section.path}</span>
+              </button>
+            ) : (
+              <div className="text-muted-foreground p-3 pb-2 text-sm font-medium break-all">
+                {section.path}
+              </div>
+            )}
+            <div className="rounded-lg border border-[var(--diffshub-card-border,rgb(0_0_0_/_0.1))] dark:border-[var(--diffshub-card-border,rgb(255_255_255_/_0.15))]">
+              {section.threads.map((thread) => (
+                <button
+                  key={thread.key}
+                  type="button"
+                  className="focus-visible:ring-ring flex w-full cursor-pointer items-start gap-2 border-b border-[var(--diffshub-card-border,rgb(0_0_0_/_0.1))] bg-[var(--diffshub-card-bg,var(--color-card))] p-3 text-left text-sm outline-none first:rounded-t-lg last:rounded-b-lg last:border-b-0 hover:bg-[var(--diffshub-card-hover-bg,var(--color-muted))] focus-visible:ring-2 dark:border-[var(--diffshub-card-border,rgb(255_255_255_/_0.15))]"
+                  onClick={(event) =>
+                    handleRowClick(event, () => onSelectThread?.(thread))
+                  }
+                >
+                  <CommentAuthorAvatar
+                    seed={thread.author}
+                    avatarSrc={
+                      thread.avatarUrl ?? defaultCommentAuthorAvatarUrl
+                    }
+                    className="size-5"
+                  />
+                  <div className="flex min-w-0 flex-col items-start gap-0.5 select-text">
+                    <div className="text-muted-foreground flex min-w-0 flex-wrap gap-x-1 gap-y-0.5">
+                      <span className="break-all">{thread.author}</span>
+                      <span>
+                        {thread.isResolved ? 'resolved' : 'commented on'}
+                      </span>
+                      <span
+                        className={cn(
+                          getThreadAnchorClassName(thread.anchor),
+                          'font-medium'
+                        )}
+                      >
+                        {getThreadAnchorLabel(thread.anchor)}
+                      </span>
+                      {thread.commentCount > 1 && (
+                        <span>({thread.commentCount})</span>
+                      )}
+                    </div>
+                    <MarkdownRender
+                      className="text-foreground w-full leading-5"
+                      markdown={thread.body}
+                    />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
+  }
+
   if (commentSections.length === 0) {
     return (
       <div className="text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center gap-2 px-7 text-center text-sm">
@@ -95,7 +213,7 @@ export const DiffsHubCommentsList = memo(function DiffsHubCommentsList({
             <span className="light:text-white light:bg-[rgb(0,159,255)] inline-flex h-[20px] w-[20px] items-center justify-center rounded-[4px] align-top dark:bg-[rgb(0,159,255)] dark:text-black">
               <IconPlus />
             </span>{' '}
-            button to add fake code comments.
+            button to add inline comments.
           </p>
         </div>
       </div>

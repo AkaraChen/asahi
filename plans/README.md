@@ -9,6 +9,7 @@ honor its STOP conditions, and update your row when done.
 | Plan | Title | Priority | Effort | Depends on | Status |
 |---|---|---|---|---|---|
 | 001 | Harden desktop IPC payloads with zod schemas | P1 | M | - | IN PROGRESS |
+| 002 | Wire PR diff comments to GitHub inline threads | P1 | L | - | BLOCKED (manual PR smoke needs a git remote/target PR) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) |
 REJECTED (with one-line rationale).

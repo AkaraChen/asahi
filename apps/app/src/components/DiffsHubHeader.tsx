@@ -25,6 +25,7 @@ import {
   IconSymbolDiffstat,
 } from '@pierre/icons';
 import { type ColorMode } from '@pierre/theming';
+import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import {
   type CSSProperties,
@@ -84,6 +85,7 @@ interface HeaderProps {
   desktopPrTitle?: string;
   onToggleCollapseMode(): void;
   onToggleFileTreeOverlay(): void;
+  onRefresh(): void;
   setColorMode(mode: ColorMode): void;
   setDarkThemeName(name: DarkThemeName): void;
   setDebugMode: Dispatch<SetStateAction<boolean>>;
@@ -112,6 +114,7 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
   overflow,
   onToggleCollapseMode,
   onToggleFileTreeOverlay,
+  onRefresh,
   setColorMode,
   setDarkThemeName,
   setDebugMode,
@@ -209,6 +212,18 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
             </>
           )}
           <div className="flex items-center">
+            <HeaderTooltip label="Refresh PR">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Refresh PR"
+                className={HEADER_ICON_BUTTON_CLASS}
+                onClick={onRefresh}
+              >
+                <RefreshCw className="size-4 md:size-3" />
+              </Button>
+            </HeaderTooltip>
             <HeaderTooltip label={diffStyleLabel}>
               <Button
                 type="button"

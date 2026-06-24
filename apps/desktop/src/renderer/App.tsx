@@ -22,9 +22,24 @@ import type {
   DesktopViewerPrTabRequest,
   DesktopViewerTabRequest,
 } from '../shared/desktopTabs';
-import type { DesktopPullRequest } from '../shared/githubPullRequests';
+import type {
+  DesktopGitHubInlineComment,
+  DesktopGitHubInlineCommentAnchor,
+  DesktopGitHubInlineThread,
+  DesktopGitHubReactionContent,
+  DesktopPullRequest,
+} from '../shared/githubPullRequests';
 import { DesktopHomePage } from './DesktopHomePage';
-import { listRepositoryPullRequests } from './desktopApi';
+import {
+  addInlineCommentReaction,
+  createInlineComment,
+  listInlineThreads,
+  listRepositoryPullRequests,
+  removeInlineCommentReaction,
+  replyInlineComment,
+  resolveInlineThread,
+  unresolveInlineThread,
+} from './desktopApi';
 import { navigateDesktop } from './navigation';
 
 const queryClient = new QueryClient();
@@ -410,11 +425,98 @@ function DesktopViewer({ location }: { location: DesktopLocation }) {
         desktopPrBody={viewerTabRequest?.body}
         desktopPrTitle={viewerTabRequest?.title ?? location.prTitle}
         domain={route.domain}
+        githubComments={
+          viewerTabRequest?.type === 'pr'
+            ? createDesktopGitHubCommentsClient(viewerTabRequest)
+            : undefined
+        }
         initialUrl={route.url}
         path={route.upstreamPath}
       />
     </div>
   );
+}
+
+function createDesktopGitHubCommentsClient(tab: DesktopViewerPrTabRequest) {
+  const ref = { owner: tab.owner, repo: tab.repo, number: tab.number };
+  return {
+    addReaction: async (
+      comment: DesktopGitHubInlineComment,
+      content: DesktopGitHubReactionContent
+    ) => {
+      if (comment.databaseId == null) {
+        return { ok: false as const, message: 'Comment is not published yet.' };
+      }
+      const result = await addInlineCommentReaction({
+        ...ref,
+        commentId: comment.databaseId,
+        content,
+      });
+      return result.ok
+        ? { ok: true as const, reactions: result.reactions }
+        : { ok: false as const, message: result.message };
+    },
+    createComment: async (
+      anchor: DesktopGitHubInlineCommentAnchor,
+      body: string
+    ) => {
+      const result = await createInlineComment({ ...ref, anchor, body });
+      return result.ok
+        ? {
+            ok: true as const,
+            comment: result.comment,
+            thread: result.thread,
+          }
+        : { ok: false as const, message: result.message };
+    },
+    listThreads: async () => {
+      const result = await listInlineThreads(ref);
+      return result.ok
+        ? { ok: true as const, items: result.items, viewer: result.viewer }
+        : { ok: false as const, message: result.message };
+    },
+    removeReaction: async (
+      comment: DesktopGitHubInlineComment,
+      content: DesktopGitHubReactionContent
+    ) => {
+      if (comment.databaseId == null) {
+        return { ok: false as const, message: 'Comment is not published yet.' };
+      }
+      const result = await removeInlineCommentReaction({
+        ...ref,
+        commentId: comment.databaseId,
+        content,
+      });
+      return result.ok
+        ? { ok: true as const, reactions: result.reactions }
+        : { ok: false as const, message: result.message };
+    },
+    reply: async (comment: DesktopGitHubInlineComment, body: string) => {
+      if (comment.databaseId == null) {
+        return { ok: false as const, message: 'Comment is not published yet.' };
+      }
+      const result = await replyInlineComment({
+        ...ref,
+        body,
+        inReplyTo: comment.databaseId,
+      });
+      return result.ok
+        ? { ok: true as const, comment: result.comment }
+        : { ok: false as const, message: result.message };
+    },
+    resolveThread: async (thread: DesktopGitHubInlineThread) => {
+      const result = await resolveInlineThread({ threadId: thread.id });
+      return result.ok
+        ? { ok: true as const }
+        : { ok: false as const, message: result.message };
+    },
+    unresolveThread: async (thread: DesktopGitHubInlineThread) => {
+      const result = await unresolveInlineThread({ threadId: thread.id });
+      return result.ok
+        ? { ok: true as const }
+        : { ok: false as const, message: result.message };
+    },
+  };
 }
 
 function useDesktopLocation(): DesktopLocation {

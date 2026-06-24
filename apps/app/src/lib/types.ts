@@ -22,6 +22,72 @@ export interface SavedCommentMetadata {
   range: SelectedLineRange;
 }
 
+export type GitHubInlineCommentSide = 'LEFT' | 'RIGHT';
+export type GitHubReactionContent =
+  | '+1'
+  | '-1'
+  | 'laugh'
+  | 'confused'
+  | 'heart'
+  | 'hooray'
+  | 'rocket'
+  | 'eyes';
+
+export type GitHubInlineCommentAnchor =
+  | {
+      kind: 'line';
+      path: string;
+      line: number;
+      side: GitHubInlineCommentSide;
+      startLine?: number;
+      startSide?: GitHubInlineCommentSide;
+    }
+  | {
+      kind: 'file';
+      path: string;
+    };
+
+export interface GitHubCommentAuthor {
+  avatarUrl?: string;
+  login: string;
+}
+
+export interface GitHubReactionGroup {
+  content: GitHubReactionContent;
+  count: number;
+  viewerHasReacted: boolean;
+}
+
+export interface GitHubInlineComment {
+  author: GitHubCommentAuthor;
+  body: string;
+  bodyHTML: string;
+  createdAt: string;
+  databaseId?: number;
+  id: string;
+  optimistic?: boolean;
+  failed?: boolean;
+  reactions: GitHubReactionGroup[];
+  updatedAt: string;
+  url?: string;
+}
+
+export interface GitHubInlineThread {
+  anchor: GitHubInlineCommentAnchor;
+  comments: GitHubInlineComment[];
+  id: string;
+  isCollapsed: boolean;
+  isResolved: boolean;
+  optimistic?: boolean;
+}
+
+export interface GitHubInlineThreadMetadata {
+  kind: 'github-thread';
+  key: string;
+  range: SelectedLineRange;
+  thread: GitHubInlineThread;
+}
+
 export interface DraftCommentMetadata {
   kind: 'draft';
   key: string;
@@ -29,7 +95,46 @@ export interface DraftCommentMetadata {
   range: SelectedLineRange;
 }
 
-export type CommentMetadata = SavedCommentMetadata | DraftCommentMetadata;
+export type CommentMetadata =
+  | SavedCommentMetadata
+  | DraftCommentMetadata
+  | GitHubInlineThreadMetadata;
+
+export interface GitHubInlineCommentsClient {
+  addReaction(
+    comment: GitHubInlineComment,
+    content: GitHubReactionContent
+  ): Promise<{ ok: true; reactions: GitHubReactionGroup[] } | { ok: false; message: string }>;
+  createComment(
+    anchor: GitHubInlineCommentAnchor,
+    body: string
+  ): Promise<
+    | { ok: true; comment: GitHubInlineComment; thread?: GitHubInlineThread }
+    | { ok: false; message: string }
+  >;
+  listThreads(): Promise<
+    | {
+        ok: true;
+        items: GitHubInlineThread[];
+        viewer: GitHubCommentAuthor | null;
+      }
+    | { ok: false; message: string }
+  >;
+  removeReaction(
+    comment: GitHubInlineComment,
+    content: GitHubReactionContent
+  ): Promise<{ ok: true; reactions: GitHubReactionGroup[] } | { ok: false; message: string }>;
+  reply(
+    comment: GitHubInlineComment,
+    body: string
+  ): Promise<{ ok: true; comment: GitHubInlineComment } | { ok: false; message: string }>;
+  resolveThread(
+    thread: GitHubInlineThread
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
+  unresolveThread(
+    thread: GitHubInlineThread
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
+}
 
 export interface DiffsHubCommentSidebarFile {
   fileOrder: number;
@@ -80,6 +185,38 @@ export interface DiffsHubSavedCommentItem {
   fileOrder: number;
   itemId: string;
   path: string;
+}
+
+export type DiffsHubThreadSidebarAnchor =
+  | {
+      kind: 'file';
+    }
+  | {
+      kind: 'line';
+      lineNumber: number;
+      side: AnnotationSide;
+    };
+
+export interface DiffsHubThreadSidebarEntry {
+  anchor: DiffsHubThreadSidebarAnchor;
+  author: string;
+  avatarUrl?: string;
+  body: string;
+  commentCount: number;
+  fileOrder: number;
+  isResolved: boolean;
+  itemId: string;
+  key: string;
+  path: string;
+  range: SelectedLineRange;
+  thread: GitHubInlineThread;
+}
+
+export interface DiffsHubThreadSidebarItem {
+  fileOrder: number;
+  itemId: string;
+  path: string;
+  threads: DiffsHubThreadSidebarEntry[];
 }
 
 // The fully pre-computed input this tree needs for a given fetch. It is built

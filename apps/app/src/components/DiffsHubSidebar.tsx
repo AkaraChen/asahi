@@ -51,6 +51,8 @@ import type {
   DiffsHubFileTreeSource,
   DiffsHubSavedCommentEntry,
   DiffsHubSavedCommentItem,
+  DiffsHubThreadSidebarEntry,
+  DiffsHubThreadSidebarItem,
 } from '../lib/types';
 
 type SidebarTab = 'files' | 'comments' | 'body';
@@ -65,12 +67,14 @@ interface DiffsHubSidebarProps {
   debugMode: boolean;
   diffStats: DiffsHubDiffStatsData | null;
   desktopPrBody?: string;
+  threadSections?: readonly DiffsHubThreadSidebarItem[];
   sidebarWidth?: number;
   mobileOverlayOpen?: boolean;
   onSidebarResizeStart?(startX: number, startWidth: number): void;
   onMobileClose(): void;
   onSelectComment(comment: DiffsHubSavedCommentEntry): void;
   onSelectItem(itemId: string): void;
+  onSelectThread(thread: DiffsHubThreadSidebarEntry): void;
   scrollRef: RefObject<HTMLDivElement | null>;
   source: DiffsHubFileTreeSource;
   streaming: boolean;
@@ -84,22 +88,20 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
   debugMode,
   diffStats,
   desktopPrBody,
+  threadSections,
   sidebarWidth,
   onSidebarResizeStart,
   mobileOverlayOpen = false,
   onMobileClose,
   onSelectComment,
   onSelectItem,
+  onSelectThread,
   scrollRef,
   source,
   streaming,
   themeCycle,
 }: DiffsHubSidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('files');
-  let totalCommentCount = 0;
-  for (const section of commentSections) {
-    totalCommentCount += section.comments.length;
-  }
   // Pull the resolved Shiki theme so the whole sidebar (tabs row, file
   // tree, diff stats panel, footer) sits on the theme's sidebar surface
   // and its chrome text follows the theme's own foreground tokens
@@ -243,22 +245,10 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
             <ButtonGroupItem
               value="comments"
               size="icon-only"
-              className={cn(
-                'shadow-none',
-                totalCommentCount > 0 && 'w-auto gap-1 pr-1'
-              )}
+              className="shadow-none"
             >
               <IconComment className="size-4 md:size-3" />
               <span className="sr-only">Comments</span>
-              {totalCommentCount > 0 && (
-                <span
-                  aria-hidden="true"
-                  title="Unread comment count"
-                  className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[color-mix(in_srgb,currentColor_18%,transparent)] px-1 text-[10px] leading-none font-medium tabular-nums"
-                >
-                  {totalCommentCount}
-                </span>
-              )}
             </ButtonGroupItem>
             {desktopPrBody != null && desktopPrBody.trim() !== '' && (
               <ButtonGroupItem
@@ -320,6 +310,8 @@ export const DiffsHubSidebar = memo(function DiffsHubSidebar({
               defaultCommentAuthorAvatarUrl={defaultCommentAuthorAvatarUrl}
               onSelectComment={onSelectComment}
               onSelectItem={onSelectItem}
+              onSelectThread={onSelectThread}
+              threadSections={threadSections}
             />
           </div>
           {desktopPrBody != null && desktopPrBody.trim() !== '' && (

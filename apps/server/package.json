@@ -17,12 +17,14 @@
   "dependencies": {
     "@hono/node-server": "^2.0.5",
     "@hono/zod-validator": "^0.8.0",
+    "escape-html": "^1.0.3",
     "hono": "^4.12.26",
     "p-limit": "7.3.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@types/escape-html": "^1.0.4",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   }

@@ -33,7 +33,9 @@
     "@radix-ui/react-switch": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
+    "escape-html": "^1.0.3",
     "lucide-react": "catalog:",
+    "marked": "^18.0.5",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -42,6 +44,7 @@
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@types/escape-html": "^1.0.4",
     "@types/jsdom": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
