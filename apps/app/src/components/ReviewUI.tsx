@@ -500,6 +500,7 @@ function buildGitHubThreadSidebarSections(
       author: firstComment.author.login,
       avatarUrl: firstComment.author.avatarUrl,
       body: firstComment.body,
+      bodyHTML: firstComment.bodyHTML,
       commentCount: thread.comments.length,
       fileOrder: file.fileOrder,
       isResolved: thread.isResolved,

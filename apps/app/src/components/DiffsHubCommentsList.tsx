@@ -5,7 +5,7 @@ import { IconConvoFill, IconPlus } from '@pierre/icons';
 import { memo, type MouseEvent } from 'react';
 
 import { CommentAuthorAvatar } from './CommentAuthorAvatar';
-import { MarkdownRender } from './MarkdownRender';
+import { GitHubMarkdownHtml } from './GitHubMarkdownHtml';
 import { cn } from '../lib/cn';
 import type {
   CommentLineType,
@@ -188,10 +188,16 @@ export const DiffsHubCommentsList = memo(function DiffsHubCommentsList({
                         <span>({thread.commentCount})</span>
                       )}
                     </div>
-                    <MarkdownRender
-                      className="text-foreground w-full leading-5"
-                      markdown={thread.body}
-                    />
+                    {thread.bodyHTML.trim().length > 0 ? (
+                      <GitHubMarkdownHtml
+                        html={thread.bodyHTML}
+                        className="text-foreground block w-full min-w-0 text-sm leading-5"
+                      />
+                    ) : (
+                      <p className="text-foreground w-full break-words whitespace-pre-wrap">
+                        {thread.body}
+                      </p>
+                    )}
                   </div>
                 </button>
               ))}

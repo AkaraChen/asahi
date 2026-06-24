@@ -125,6 +125,9 @@ importers:
       '@pierre/truncate':
         specifier: 0.0.2
         version: 0.0.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@primer/css':
+        specifier: 22.3.0
+        version: 22.3.0(@primer/primitives@11.9.0)
       '@radix-ui/react-dropdown-menu':
         specifier: 'catalog:'
         version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1549,6 +1552,15 @@ packages:
 
   '@poppinss/exception@1.2.3':
     resolution: {integrity: sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw==}
+
+  '@primer/css@22.3.0':
+    resolution: {integrity: sha512-JARQl6Ar2g+jGjxRfA85zKkM+lJV5GQz2Zn4wk4CXzQ2NYwFpOMVmhht2IPDAuTfv/lmocnEPYjW6cTmJbYGAQ==}
+    engines: {node: '>=16.0.0'}
+    peerDependencies:
+      '@primer/primitives': 10.x || 11.x
+
+  '@primer/primitives@11.9.0':
+    resolution: {integrity: sha512-yESOalhd7s7S3unV1V32v3Z0RszXiiz6pzy6hVI9xpdTh1q1Gt8vyDFxRlqIvuwc5ZaO1+gYQTDbjxb4nWBzMw==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -5768,6 +5780,12 @@ snapshots:
       supports-color: 10.2.2
 
   '@poppinss/exception@1.2.3': {}
+
+  '@primer/css@22.3.0(@primer/primitives@11.9.0)':
+    dependencies:
+      '@primer/primitives': 11.9.0
+
+  '@primer/primitives@11.9.0': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 

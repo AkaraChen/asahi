@@ -28,6 +28,7 @@
     "@pierre/theming": "0.0.1",
     "@pierre/trees": "1.0.0-beta.4",
     "@pierre/truncate": "0.0.2",
+    "@primer/css": "22.3.0",
     "@radix-ui/react-dropdown-menu": "catalog:",
     "@radix-ui/react-slot": "catalog:",
     "@radix-ui/react-switch": "catalog:",

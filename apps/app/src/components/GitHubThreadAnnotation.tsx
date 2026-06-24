@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { Button } from './Button';
 import { CommentAuthorAvatar } from './CommentAuthorAvatar';
-import { MarkdownRender } from './MarkdownRender';
+import { GitHubMarkdownHtml } from './GitHubMarkdownHtml';
 import { annotationCardBase } from '../lib/annotation';
 import { cn } from '../lib/cn';
 import type {
@@ -52,8 +52,13 @@ export function GitHubThreadAnnotation({
   const trimmedReply = replyBody.trim();
 
   return (
-    <div className={cn(annotationCardBase, 'flex-col items-stretch gap-2')}>
-      <div className="flex items-center gap-2">
+    <div
+      className={cn(
+        annotationCardBase,
+        'min-w-0 max-w-none w-[min(600px,calc(100%-1rem))] flex-col items-stretch gap-2'
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -65,7 +70,7 @@ export function GitHubThreadAnnotation({
             className={cn('size-3 transition-transform', collapsed && '-rotate-90')}
           />
         </Button>
-        <span className="text-xs font-medium">
+        <span className="min-w-0 text-xs font-medium">
           {thread.isResolved ? 'Resolved thread' : 'GitHub thread'}
         </span>
         <Button
@@ -80,7 +85,7 @@ export function GitHubThreadAnnotation({
       </div>
       {!collapsed && (
         <>
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2">
             {thread.comments.map((comment) => (
               <GitHubInlineCommentView
                 comment={comment}
@@ -151,7 +156,16 @@ function GitHubInlineCommentView({
           {comment.optimistic && <span>Publishing...</span>}
           {comment.failed && <span>Failed</span>}
         </div>
-        <MarkdownRender className="mt-1 max-w-none" markdown={comment.body} />
+        {comment.bodyHTML.trim().length > 0 ? (
+          <GitHubMarkdownHtml
+            html={comment.bodyHTML}
+            className="mt-1 block min-w-0 max-w-full text-sm leading-6"
+          />
+        ) : (
+          <p className="mt-1 break-words whitespace-pre-wrap text-sm">
+            {comment.body}
+          </p>
+        )}
         <div className="mt-1 flex flex-wrap items-center gap-1">
           {REACTIONS.map(({ content, label }) => {
             const group = comment.reactions.find(

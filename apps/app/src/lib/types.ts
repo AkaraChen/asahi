@@ -202,6 +202,7 @@ export interface DiffsHubThreadSidebarEntry {
   author: string;
   avatarUrl?: string;
   body: string;
+  bodyHTML: string;
   commentCount: number;
   fileOrder: number;
   isResolved: boolean;
