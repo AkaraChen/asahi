@@ -244,12 +244,12 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
 
   return (
     <main
-      className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 overflow-hidden"
+      className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 overflow-hidden antialiased"
       style={{
         gridTemplateRows: `${DESKTOP_TAB_BAR_HEIGHT}px minmax(0, 1fr)`,
       }}
     >
-      <div className="select-none flex min-w-0 items-end overflow-x-auto border-b border-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[12px] leading-none">
+      <div className="flex min-w-0 select-none items-end overflow-x-auto border-b border-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[12px] leading-none">
         <HomeTabButton
           active={activeTabId === DESKTOP_HOME_TAB_ID}
           onClick={() => selectTab(DESKTOP_HOME_TAB_ID)}
@@ -290,8 +290,8 @@ function HomeTabButton({
       aria-label="Home"
       className={
         active
-          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-px after:h-0 after:outline-2 after:outline-[var(--color-primary)] after:content-[""]'
-          : 'flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
+          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] shadow-[inset_0_-2px_0_var(--color-primary)]'
+          : 'flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] active:scale-[0.96]'
       }
       onClick={onClick}
     >
@@ -312,29 +312,29 @@ function TabButton({
   onClose?: () => void;
 }) {
   return (
-      <div
-        className={
-          active
-            ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-b-0 border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] after:absolute after:inset-x-0 after:bottom-px after:h-0 after:outline-2 after:outline-[var(--color-primary)] after:content-[""]'
-            : 'hover:bg-[var(--color-accent)] flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border)] hover:text-[var(--color-foreground)]'
-        }
+    <div
+      className={
+        active
+          ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] shadow-[inset_0_-2px_0_var(--color-primary)]'
+          : 'flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
+      }
+    >
+      <button
+        type="button"
+        className="min-w-0 flex-1 truncate text-left active:scale-[0.96]"
+        onClick={onClick}
       >
+        {label}
+      </button>
+      {onClose != null && (
         <button
           type="button"
-          className="min-w-0 flex-1 truncate text-left"
-          onClick={onClick}
+          aria-label={`Close ${label}`}
+          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] active:scale-[0.96]"
+          onClick={onClose}
         >
-          {label}
+          <TabCloseIcon />
         </button>
-        {onClose != null && (
-          <button
-            type="button"
-            aria-label={`Close ${label}`}
-            className="flex size-5 shrink-0 items-center justify-center text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
-            onClick={onClose}
-          >
-            <TabCloseIcon />
-          </button>
       )}
     </div>
   );

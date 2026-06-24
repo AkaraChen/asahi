@@ -3,7 +3,14 @@ import {
   startDiffApiServer,
   type DiffApiServer,
 } from '@asahi/server/node';
-import { app, BrowserWindow, WebContentsView, ipcMain, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  WebContentsView,
+  ipcMain,
+  shell,
+  type WebContents,
+} from 'electron';
 import { randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,6 +38,12 @@ const viewerTabRequests = new Map<string, DesktopViewerTabRequest>();
 let mainWindow: BrowserWindow | undefined;
 let activeTabId = DESKTOP_HOME_TAB_ID;
 
+const singleInstanceLock = app.requestSingleInstanceLock();
+
+if (!singleInstanceLock) {
+  app.quit();
+}
+
 function getDiffServer(): Promise<DiffApiServer> {
   diffServerPromise ??= startDiffApiServer({
     accessToken: diffApiAccessToken,
@@ -41,10 +54,12 @@ function getDiffServer(): Promise<DiffApiServer> {
 
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
+    autoHideMenuBar: true,
     backgroundColor: '#101010',
     height: 960,
     minHeight: 640,
     minWidth: 900,
+    show: false,
     title: 'Asahi',
     webPreferences: {
       contextIsolation: true,
@@ -55,9 +70,9 @@ function createMainWindow(): void {
     width: 1440,
   });
 
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    openSafeExternalUrl(url);
-    return { action: 'deny' };
+  prepareWebContents(mainWindow.webContents);
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
   });
   mainWindow.on('resize', layoutActiveViewerTab);
   mainWindow.on('closed', () => {
@@ -92,10 +107,7 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
       sandbox: true,
     },
   });
-  view.webContents.setWindowOpenHandler(({ url }) => {
-    openSafeExternalUrl(url);
-    return { action: 'deny' };
-  });
+  prepareWebContents(view.webContents);
   const search = new URLSearchParams();
   if (request.title != null && request.title.trim() !== '') {
     search.set('asahi-pr-title', request.title);
@@ -108,6 +120,16 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
   }`;
   void view.webContents.loadURL(getRendererTabUrl(path));
   return view;
+}
+
+function prepareWebContents(webContents: WebContents): void {
+  webContents.setWindowOpenHandler(({ url }) => {
+    openSafeExternalUrl(url);
+    return { action: 'deny' };
+  });
+  webContents.on('context-menu', (event) => {
+    event.preventDefault();
+  });
 }
 
 function selectTab(id: string): void {
@@ -202,13 +224,30 @@ function openSafeExternalUrl(value: string): void {
 }
 
 void app.whenReady().then(() => {
+  if (!singleInstanceLock) return;
   createMainWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (mainWindow != null) {
+      mainWindow.show();
+      mainWindow.focus();
+    } else if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow();
     }
   });
+});
+
+app.on('second-instance', () => {
+  if (mainWindow == null) {
+    createMainWindow();
+    return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+  mainWindow.show();
+  mainWindow.focus();
 });
 
 app.on('before-quit', () => {

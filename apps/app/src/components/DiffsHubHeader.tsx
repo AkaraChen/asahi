@@ -163,12 +163,14 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
       )}
       style={themeChromeStyle}
     >
-      <Link
-        href="/"
-        className="absolute top-4 left-[50%] inline-flex -translate-x-1/2 transition-transform duration-200 hover:scale-110 md:static md:translate-x-0"
-      >
-        <DiffsHubLogo />
-      </Link>
+      {!isDesktopPrTitle && (
+        <Link
+          href="/"
+          className="absolute top-4 left-[50%] inline-flex -translate-x-1/2 transition-transform duration-200 hover:scale-110 md:static md:translate-x-0"
+        >
+          <DiffsHubLogo />
+        </Link>
+      )}
       <DiffUrlForm
         className="order-last md:order-none md:mr-auto"
         initialUrl={initialUrl}

@@ -81,11 +81,11 @@ export function DesktopHomePage({
   );
 
   return (
-    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden antialiased select-none">
       <header className="border-border-opaque bg-[var(--diffshub-sidebar-bg)] z-10 flex flex-wrap items-center gap-2.5 border-b px-3 py-1.5 md:flex-nowrap">
         <Link
           href="/"
-          className="inline-flex transition-transform duration-200 hover:scale-110"
+          className="inline-flex size-10 items-center justify-center rounded-md transition-transform active:scale-[0.96]"
         >
           <DiffsHubLogo />
         </Link>
@@ -128,7 +128,7 @@ export function DesktopHomePage({
             <button
               type="button"
               aria-label="Add repository"
-              className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-md transition-colors"
+              className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-10 items-center justify-center rounded-md transition-[color,background-color,transform] active:scale-[0.96]"
               onClick={() => setDialogOpen(true)}
             >
               <PlusIcon />
@@ -290,13 +290,13 @@ function RepositoryDialog({
   }
 
   return (
-    <div className="bg-background fixed top-1/2 left-1/2 z-50 grid h-[min(560px,calc(100dvh-48px))] w-[min(760px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)]">
+    <div className="bg-background fixed top-1/2 left-1/2 z-50 grid h-[min(560px,calc(100dvh-48px))] w-[min(760px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)] shadow-[0_24px_80px_rgb(0_0_0_/_0.22),0_0_0_1px_rgb(0_0_0_/_0.08)] dark:shadow-[0_24px_80px_rgb(0_0_0_/_0.44),0_0_0_1px_rgb(255_255_255_/_0.1)]">
       <div className="border-border flex items-center gap-2 border-b px-3 py-2">
-        <h2 className="mr-auto text-sm font-medium">Add repository</h2>
+        <h2 className="mr-auto text-sm font-medium text-balance">Add repository</h2>
         <button
           type="button"
           aria-label="Close"
-          className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-8 items-center justify-center rounded-md transition-colors"
+          className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-10 items-center justify-center rounded-md transition-[color,background-color,transform] active:scale-[0.96]"
           onClick={onClose}
         >
           <XIcon />
@@ -325,15 +325,15 @@ function RepositoryDialog({
                 type="button"
                 className={
                   item.login === owner?.login
-                    ? 'bg-accent text-foreground grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm'
-                    : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground grid w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors'
+                    ? 'bg-accent text-foreground grid min-h-10 w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm'
+                    : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground grid min-h-10 w-full grid-cols-[24px_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-[color,background-color,transform] active:scale-[0.96]'
                 }
                 key={`${item.type}:${item.login}`}
                 onClick={() => setOwnerKey(`${item.type}:${item.login}`)}
               >
                 <img
                   alt=""
-                  className="bg-muted size-6 rounded-full"
+                  className="bg-muted size-6 rounded-full outline -outline-offset-1 outline-black/10 dark:outline-white/10"
                   src={item.avatarUrl}
                 />
                 <span className="truncate">{item.login}</span>
@@ -354,9 +354,7 @@ function RepositoryDialog({
             />
           </div>
           <div className="grid min-h-0 auto-rows-min grid-cols-2 gap-3 overflow-auto p-3">
-            {owner != null && repositoriesQuery.isPending && (
-              <RepositoryCardSkeletons />
-            )}
+            {owner != null && repositoriesQuery.isPending && <LoadingStatus />}
             {repositoriesQuery.isError && (
               <p className="text-muted-foreground col-span-full px-1 py-2 text-sm">
                 {repositoriesQuery.error.message}
@@ -367,27 +365,22 @@ function RepositoryDialog({
                 const selected = selectedSet.has(repository.nameWithOwner);
                 return (
                   <div
-                    role="button"
-                    tabIndex={0}
-                    className="border-border hover:bg-accent/60 grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-md border px-3 py-3 text-left transition-colors"
+                    className="border-border hover:bg-accent/60 grid min-h-20 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-md border px-3 py-3 text-left transition-[color,background-color,border-color]"
                     key={repository.id}
-                    onClick={() => toggleRepository(repository)}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Enter' && event.key !== ' ') return;
-                      event.preventDefault();
-                      toggleRepository(repository);
-                    }}
                   >
-                    <span className="min-w-0">
+                    <button
+                      type="button"
+                      className="min-h-10 min-w-0 text-left transition-transform active:scale-[0.96]"
+                      onClick={() => toggleRepository(repository)}
+                    >
                       <span className="block truncate text-sm">
                         {repository.name}
                       </span>
-                    </span>
+                    </button>
                     <Switch
                       aria-label={`Select ${repository.name}`}
                       checked={selected}
                       onCheckedChange={() => toggleRepository(repository)}
-                      onClick={(event) => event.stopPropagation()}
                     />
                   </div>
                 );
@@ -399,15 +392,13 @@ function RepositoryDialog({
   );
 }
 
-function RepositoryCardSkeletons() {
-  return Array.from({ length: 4 }, (_, index) => (
-    <div
-      className="border-border grid min-h-20 rounded-md border px-3 py-3"
-      key={index}
-    >
-      <span className="bg-muted h-4 w-2/3 animate-pulse rounded" />
+function LoadingStatus() {
+  return (
+    <div className="text-muted-foreground col-span-full flex min-h-24 items-center justify-center gap-2 text-sm">
+      <SpinnerIcon />
+      <span>Loading...</span>
     </div>
-  ));
+  );
 }
 
 function RepositoryButton({
@@ -422,35 +413,32 @@ function RepositoryButton({
   onRemove: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <div
       className={
         active
-          ? 'bg-accent text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2 text-left text-sm'
-          : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-colors'
+          ? 'bg-accent text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-md'
+          : 'hover:bg-accent/60 text-muted-foreground hover:text-foreground group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-md transition-[color,background-color]'
       }
-      onClick={onClick}
     >
-      <span className="truncate">{label}</span>
-      <span
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        className="min-h-10 min-w-0 px-2 text-left text-sm active:scale-[0.96]"
+        onClick={onClick}
+      >
+        <span className="block truncate">{label}</span>
+      </button>
+      <button
+        type="button"
         aria-label={`Remove ${label}`}
-        className="opacity-0 transition-opacity group-hover:opacity-100"
+        className="text-muted-foreground hover:text-foreground flex size-10 items-center justify-center rounded-md opacity-0 transition-[color,background-color,opacity,transform] hover:bg-accent group-hover:opacity-100 focus:opacity-100 active:scale-[0.96]"
         onClick={(event) => {
-          event.stopPropagation();
-          onRemove();
-        }}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
           event.stopPropagation();
           onRemove();
         }}
       >
         <XIcon />
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
@@ -464,7 +452,7 @@ function PullRequestRow({
   return (
     <button
       type="button"
-      className="hover:bg-accent/60 focus-visible:ring-ring grid w-full grid-cols-[minmax(0,1fr)_auto] gap-4 px-4 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      className="hover:bg-accent/60 focus-visible:ring-ring grid min-h-[64px] w-full grid-cols-[minmax(0,1fr)_auto] gap-4 px-4 py-3 text-left transition-[color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.996]"
       onClick={() =>
         onOpenViewerTab({
           id: item.viewerPath,
@@ -479,14 +467,14 @@ function PullRequestRow({
       }
     >
       <span className="min-w-0">
-        <span className="text-muted-foreground block truncate font-mono text-xs tracking-tight">
+        <span className="text-muted-foreground block truncate font-mono text-xs tracking-tight tabular-nums">
           {item.repository} #{item.number}
         </span>
-        <span className="mt-1 block truncate text-sm font-medium">
+        <span className="mt-1 block truncate text-sm font-medium text-balance">
           {item.title}
         </span>
       </span>
-      <span className="text-muted-foreground shrink-0 text-xs">
+      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
         {formatDateTime(item.updatedAt)}
       </span>
     </button>
@@ -512,7 +500,7 @@ function Select({
       </label>
       <select
         id={id}
-        className="hover:bg-accent text-muted-foreground hover:text-foreground h-9 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-colors"
+        className="hover:bg-accent text-muted-foreground hover:text-foreground h-10 rounded-md border border-transparent bg-transparent px-2 text-sm outline-none transition-[color,background-color]"
         onChange={(event) => onChange(event.currentTarget.value)}
         value={value}
       >
@@ -535,7 +523,7 @@ function IconButton({
     <button
       type="button"
       aria-label={label}
-      className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-9 items-center justify-center rounded-md border border-transparent transition-colors disabled:opacity-50"
+      className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-10 items-center justify-center rounded-md border border-transparent transition-[color,background-color,transform] disabled:opacity-50 active:scale-[0.96]"
       disabled={loading}
       onClick={onClick}
     >
@@ -571,15 +559,15 @@ function EmptyState({
   return (
     <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 px-6 text-center">
       <div>
-        <h2 className="text-sm font-medium">{title}</h2>
-        <p className="text-muted-foreground mt-1 max-w-md text-sm">
+        <h2 className="text-sm font-medium text-balance">{title}</h2>
+        <p className="text-muted-foreground mt-1 max-w-md text-sm text-pretty">
           {message}
         </p>
       </div>
       {action != null && onAction != null && (
         <button
           type="button"
-          className="hover:bg-accent rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-colors"
+          className="hover:bg-accent min-h-10 rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-[background-color,transform] active:scale-[0.96]"
           onClick={onAction}
         >
           {action}
@@ -621,14 +609,29 @@ function readSelectedRepositories(): DesktopSelectedRepository[] {
 
 function LoadingRows() {
   return (
-    <div className="divide-border divide-y">
-      {Array.from({ length: 8 }, (_, index) => (
-        <div className="px-4 py-3" key={index}>
-          <div className="bg-muted h-3 w-36 animate-pulse rounded-sm" />
-          <div className="bg-muted mt-3 h-4 max-w-xl animate-pulse rounded-sm" />
-        </div>
-      ))}
+    <div className="text-muted-foreground flex h-full min-h-64 items-center justify-center gap-2 text-sm">
+      <SpinnerIcon />
+      <span>Loading...</span>
     </div>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4 animate-spin"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
   );
 }
 
