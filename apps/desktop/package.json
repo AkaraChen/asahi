@@ -28,6 +28,7 @@
     "@asahi/server": "workspace:*",
     "@tanstack/react-query": "^5.101.0",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zustand": "^5.0.14"
   }
 }

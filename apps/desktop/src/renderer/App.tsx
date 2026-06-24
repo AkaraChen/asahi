@@ -40,6 +40,7 @@ import {
   resolveInlineThread,
   unresolveInlineThread,
 } from './desktopApi';
+import { useDesktopTabStore } from './desktopTabStore';
 import { navigateDesktop } from './navigation';
 
 const queryClient = new QueryClient();
@@ -80,8 +81,11 @@ function DesktopRouter() {
 }
 
 function DesktopTabShell({ location }: { location: DesktopLocation }) {
-  const [tabs, setTabs] = useState<DesktopViewerTabRequest[]>([]);
-  const [activeTabId, setActiveTabId] = useState(DESKTOP_HOME_TAB_ID);
+  const activeTabId = useDesktopTabStore((state) => state.activeTabId);
+  const tabs = useDesktopTabStore((state) => state.tabs);
+  const closeStoredTab = useDesktopTabStore((state) => state.closeTab);
+  const openStoredTab = useDesktopTabStore((state) => state.openTab);
+  const selectStoredTab = useDesktopTabStore((state) => state.selectTab);
   const prRepoKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const tab of tabs) {
@@ -187,30 +191,27 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
             }
           : tab;
 
-      setTabs((current) =>
-        current.some((item) => item.id === nextTab.id)
-          ? current.map((item) =>
-              item.id === nextTab.id
-                ? {
-                    ...item,
-                    viewerAvatarUrl:
-                      nextTab.viewerAvatarUrl ?? item.viewerAvatarUrl,
-                    body: nextTab.body ?? item.body,
-                    title: nextTab.title,
-                  }
-                : item
-            )
-          : [...current, nextTab]
-      );
-      setActiveTabId(nextTab.id);
+      openStoredTab(nextTab);
       void window.asahi.openViewerTab(nextTab);
     },
-    [getPrTabLabel, getPrTabViewerAvatarUrl, getPrTabViewerBody]
+    [getPrTabLabel, getPrTabViewerAvatarUrl, getPrTabViewerBody, openStoredTab]
   );
 
   useEffect(() => {
-    void window.asahi.selectDesktopTab({ id: DESKTOP_HOME_TAB_ID });
-  }, []);
+    if (activeTabId === DESKTOP_HOME_TAB_ID) {
+      void window.asahi.selectDesktopTab({ id: DESKTOP_HOME_TAB_ID });
+      return;
+    }
+
+    const activeTab = tabs.find((tab) => tab.id === activeTabId);
+    if (activeTab == null) {
+      selectStoredTab(DESKTOP_HOME_TAB_ID);
+      void window.asahi.selectDesktopTab({ id: DESKTOP_HOME_TAB_ID });
+      return;
+    }
+
+    void window.asahi.openViewerTab(activeTab);
+  }, [activeTabId, selectStoredTab, tabs]);
 
   useEffect(() => {
     if (location.pathSegments.length === 0) return;
@@ -222,24 +223,33 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
   }, [location.href, location.routeKey, openViewerTab]);
 
   function selectTab(id: string) {
-    setActiveTabId(id);
-    void window.asahi.selectDesktopTab({ id });
+    selectStoredTab(id);
+    if (id === DESKTOP_HOME_TAB_ID) {
+      void window.asahi.selectDesktopTab({ id });
+      return;
+    }
+
+    const tab = tabs.find((item) => item.id === id);
+    if (tab != null) {
+      void window.asahi.openViewerTab(tab);
+    }
   }
 
   function closeTab(id: string) {
-    setTabs((current) => {
-      const index = current.findIndex((tab) => tab.id === id);
-      const nextTabs = current.filter((tab) => tab.id !== id);
-      if (activeTabId === id) {
-        const nextActive =
-          nextTabs[Math.min(index, nextTabs.length - 1)]?.id ??
-          DESKTOP_HOME_TAB_ID;
-        setActiveTabId(nextActive);
-        void window.asahi.selectDesktopTab({ id: nextActive });
-      }
-      void window.asahi.closeViewerTab(id);
-      return nextTabs;
-    });
+    const nextActiveTabId = closeStoredTab(id);
+    void window.asahi.closeViewerTab(id);
+
+    if (nextActiveTabId === DESKTOP_HOME_TAB_ID) {
+      void window.asahi.selectDesktopTab({ id: DESKTOP_HOME_TAB_ID });
+      return;
+    }
+
+    const nextActiveTab = useDesktopTabStore
+      .getState()
+      .tabs.find((tab) => tab.id === nextActiveTabId);
+    if (nextActiveTab != null) {
+      void window.asahi.openViewerTab(nextActiveTab);
+    }
   }
 
   return (
@@ -290,7 +300,7 @@ function HomeTabButton({
       aria-label="Home"
       className={
         active
-          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] shadow-[inset_0_-2px_0_var(--color-primary)]'
+          ? 'relative flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-primary)] bg-[var(--color-card)] text-[var(--color-foreground)]'
           : 'flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--color-border)] border-b-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)] active:scale-[0.96]'
       }
       onClick={onClick}
@@ -315,8 +325,8 @@ function TabButton({
     <div
       className={
         active
-          ? 'relative flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)] shadow-[inset_0_-2px_0_var(--color-primary)]'
-          : 'flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
+          ? 'relative z-10 -ml-px flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-primary)] bg-[var(--color-card)] px-2 text-[var(--color-foreground)]'
+          : 'relative -ml-px flex h-9 w-56 shrink-0 items-center gap-1 overflow-hidden border border-[var(--color-border)] border-b-[var(--color-border)] px-2 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:z-10 hover:border-[var(--color-border)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]'
       }
     >
       <button
