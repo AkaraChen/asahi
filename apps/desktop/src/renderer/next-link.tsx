@@ -40,11 +40,6 @@ export default function Link({
   }
 
   return (
-    <a
-      {...props}
-      href={renderedHref}
-      onClick={handleClick}
-      target={target}
-    />
+    <a {...props} href={renderedHref} onClick={handleClick} target={target} />
   );
 }

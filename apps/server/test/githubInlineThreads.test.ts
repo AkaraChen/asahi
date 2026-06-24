@@ -26,7 +26,10 @@ describe('GitHub inline threads', () => {
             createdAt: '2026-06-24T00:00:00Z',
             updatedAt: '2026-06-24T00:00:01Z',
             url: 'https://github.com/owner/repo/pull/1#discussion_r123',
-            author: { login: 'octocat', avatarUrl: 'https://example.test/a.png' },
+            author: {
+              login: 'octocat',
+              avatarUrl: 'https://example.test/a.png',
+            },
             reactionGroups: [
               {
                 content: 'THUMBS_UP',

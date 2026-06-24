@@ -34,9 +34,7 @@ export function createDesktopApi(options: DesktopApiOptions = {}) {
     '/github/owner-repositories',
     zValidator('json', DesktopListOwnerRepositoriesRequestSchema),
     async (context) =>
-      context.json(
-        await listGitHubOwnerRepositories(context.req.valid('json'))
-      )
+      context.json(await listGitHubOwnerRepositories(context.req.valid('json')))
   );
 
   api.post(

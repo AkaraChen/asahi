@@ -55,7 +55,9 @@ function getCommentLineClassName(
     : 'text-[var(--diffshub-comment-del-fg,#be123c)] dark:text-[var(--diffshub-comment-del-fg,#fb7185)]';
 }
 
-function getThreadAnchorLabel(anchor: DiffsHubThreadSidebarEntry['anchor']): string {
+function getThreadAnchorLabel(
+  anchor: DiffsHubThreadSidebarEntry['anchor']
+): string {
   if (anchor.kind === 'file') {
     return 'File';
   }

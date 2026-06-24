@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @source "../../app/src";
 @source "../../desktop/src/renderer";
@@ -259,7 +259,6 @@
     display: none;
   }
 
-
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -355,10 +354,10 @@
   }
 }
 
-[data-slot='header'] {
+[data-slot="header"] {
   @apply border-b border-transparent transition-[border-color] duration-200;
 }
-[data-slot='header'].is-stuck {
+[data-slot="header"].is-stuck {
   @apply border-foreground/10;
 }
 
@@ -408,7 +407,7 @@
 .diffshub-border-deleted::before {
   flex-shrink: 0;
   display: block;
-  content: '';
+  content: "";
   width: 4px;
   height: 24px;
   background-image: linear-gradient(

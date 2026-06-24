@@ -268,7 +268,8 @@ interface TextResponseOptions {
   sourceURL?: string;
 }
 
-interface PatchStreamResponseOptions extends Omit<TextResponseOptions, 'status'> {
+interface PatchStreamResponseOptions
+  extends Omit<TextResponseOptions, 'status'> {
   getGitHubAuthToken?: DiffApiOptions['getGitHubAuthToken'];
 }
 

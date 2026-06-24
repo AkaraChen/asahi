@@ -37,6 +37,7 @@ allowBuilds:
   '@mongodb-js/zstd': true
   '@tailwindcss/oxide': true
   electron: true
+  electron-winstaller: false
   esbuild: true
   node-liblzma: true
   protobufjs: true

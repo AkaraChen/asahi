@@ -18,10 +18,14 @@ export function rangeFromGitHubAnchor(
   };
 }
 
-export function sideToGitHub(side: 'additions' | 'deletions'): 'LEFT' | 'RIGHT' {
+export function sideToGitHub(
+  side: 'additions' | 'deletions'
+): 'LEFT' | 'RIGHT' {
   return side === 'deletions' ? 'LEFT' : 'RIGHT';
 }
 
-export function sideFromGitHub(side: 'LEFT' | 'RIGHT'): 'additions' | 'deletions' {
+export function sideFromGitHub(
+  side: 'LEFT' | 'RIGHT'
+): 'additions' | 'deletions' {
   return side === 'LEFT' ? 'deletions' : 'additions';
 }

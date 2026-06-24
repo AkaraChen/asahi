@@ -7,9 +7,8 @@ import { useDiffThemeProps } from './useDiffThemeProps';
 import { useWorkerDiffTheme } from './useWorkerDiffTheme';
 import type { DiffThemeInput } from '../lib/theme/diffThemeProps';
 
-interface ThemedFileProps<
-  LAnnotation = undefined,
-> extends FileProps<LAnnotation> {
+interface ThemedFileProps<LAnnotation = undefined>
+  extends FileProps<LAnnotation> {
   // Names-now override (omitted => follow the provider/source).
   theme?: DiffThemeInput;
 }

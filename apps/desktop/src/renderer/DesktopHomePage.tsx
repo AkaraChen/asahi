@@ -57,7 +57,9 @@ export function DesktopHomePage({
       localStorage.setItem(SELECTED_REPOSITORIES_KEY, JSON.stringify(next));
       if (
         repositoryFilter !== 'all' &&
-        next.every((repository) => repository.nameWithOwner !== repositoryFilter)
+        next.every(
+          (repository) => repository.nameWithOwner !== repositoryFilter
+        )
       ) {
         setRepositoryFilter('all');
       }
@@ -292,7 +294,9 @@ function RepositoryDialog({
   return (
     <div className="bg-background fixed top-1/2 left-1/2 z-50 grid h-[min(560px,calc(100dvh-48px))] w-[min(760px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 grid-rows-[auto_minmax(0,1fr)] shadow-[0_24px_80px_rgb(0_0_0_/_0.22),0_0_0_1px_rgb(0_0_0_/_0.08)] dark:shadow-[0_24px_80px_rgb(0_0_0_/_0.44),0_0_0_1px_rgb(255_255_255_/_0.1)]">
       <div className="border-border flex items-center gap-2 border-b px-3 py-2">
-        <h2 className="mr-auto text-sm font-medium text-balance">Add repository</h2>
+        <h2 className="mr-auto text-sm font-medium text-balance">
+          Add repository
+        </h2>
         <button
           type="button"
           aria-label="Close"
@@ -604,7 +608,9 @@ function matchesUpdatedFilter(value: string, filter: UpdatedFilter): boolean {
 }
 
 function readSelectedRepositories(): DesktopSelectedRepository[] {
-  return parseSelectedRepositories(localStorage.getItem(SELECTED_REPOSITORIES_KEY));
+  return parseSelectedRepositories(
+    localStorage.getItem(SELECTED_REPOSITORIES_KEY)
+  );
 }
 
 function LoadingRows() {

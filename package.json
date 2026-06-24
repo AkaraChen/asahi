@@ -9,14 +9,22 @@
     "build:desktop": "pnpm --dir apps/desktop build",
     "build:server": "pnpm --dir apps/server typecheck",
     "build:web": "pnpm --dir apps/web build",
+    "check": "pnpm biome:check",
     "dev": "pnpm --filter agent dev",
     "dev:desktop": "pnpm --dir apps/desktop dev",
     "dev:web": "pnpm build:web && pnpm --dir apps/web dev",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "biome:check": "biome check .",
+    "biome:fix": "biome check --write .",
     "connect": "pnpm --filter agent connect",
     "test:desktop": "pnpm --dir apps/desktop test",
     "typecheck:app": "pnpm --dir apps/app typecheck",
     "typecheck:desktop": "pnpm --dir apps/desktop typecheck",
     "typecheck:server": "pnpm --dir apps/server typecheck",
     "typecheck:web": "pnpm --dir apps/web typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.0"
   }
 }

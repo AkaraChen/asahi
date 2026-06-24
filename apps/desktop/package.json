@@ -7,9 +7,36 @@
   "scripts": {
     "build": "electron-vite build",
     "dev": "electron-vite dev",
+    "dist:mac": "electron-vite build && electron-builder --mac dmg --x64 --publish never && electron-builder --mac dmg --arm64 --publish never",
     "start": "electron-vite preview",
     "test": "bun test test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "build": {
+    "appId": "dev.asahi.desktop",
+    "productName": "Asahi",
+    "directories": {
+      "output": "out/builder"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.1",
@@ -18,6 +45,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "react-grab": "^0.1.47",
     "typescript": "catalog:",

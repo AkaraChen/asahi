@@ -16,10 +16,7 @@ interface MarkdownRenderProps {
 const markdownComponents: Components = {
   a({ className, ...props }) {
     return (
-      <a
-        className={cn('underline underline-offset-2', className)}
-        {...props}
-      />
+      <a className={cn('underline underline-offset-2', className)} {...props} />
     );
   },
   blockquote({ className, ...props }) {

@@ -12,7 +12,14 @@ import {
 } from '@pierre/diffs';
 import { type CodeViewHandle, useStableCallback } from '@pierre/diffs/react';
 import { IconChevronSm, IconPlus } from '@pierre/icons';
-import { memo, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  memo,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 
 import { DraftAnnotation } from './DraftAnnotation';
@@ -408,7 +415,7 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
               return annotation;
             }
 
-        return {
+            return {
               ...annotation,
               metadata: {
                 kind: 'saved',
@@ -489,7 +496,12 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
       if (viewer == null) return;
       updateGitHubThreadAnnotation(viewer, itemId, optimisticThread);
       if (rootComment.databaseId == null) {
-        markGitHubCommentFailed(viewer, itemId, optimisticThread, optimisticComment.id);
+        markGitHubCommentFailed(
+          viewer,
+          itemId,
+          optimisticThread,
+          optimisticComment.id
+        );
         return;
       }
       void githubComments.reply(rootComment, body).then((result) => {
@@ -655,7 +667,10 @@ export const DiffsHubViewer = memo(function DiffsHubViewer({
               }
               onReply={(body) => handleGitHubReply(item.id, annotation, body)}
               onRetry={(comment) => {
-                if (comment.body.trim().length === 0 || githubComments == null) {
+                if (
+                  comment.body.trim().length === 0 ||
+                  githubComments == null
+                ) {
                   return;
                 }
                 const anchor = annotation.metadata.thread.anchor;
@@ -1009,7 +1024,10 @@ function updateCommentReactions(
       };
       if (index === -1) groups.push(next);
       else groups[index] = next;
-      return { ...comment, reactions: groups.filter((group) => group.count > 0) };
+      return {
+        ...comment,
+        reactions: groups.filter((group) => group.count > 0),
+      };
     }),
   };
 }

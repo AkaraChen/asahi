@@ -29,7 +29,11 @@ describe('streamGitPatchFiles', () => {
     const files: string[] = [];
 
     const fallback = await streamGitPatchFiles(
-      streamFromChunks([patch.slice(0, 17), patch.slice(17, 121), patch.slice(121)]),
+      streamFromChunks([
+        patch.slice(0, 17),
+        patch.slice(17, 121),
+        patch.slice(121),
+      ]),
       async (fileText) => {
         files.push(fileText);
       }

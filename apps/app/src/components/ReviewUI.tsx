@@ -22,10 +22,7 @@ import { DiffsHubViewer } from './DiffsHubViewer';
 import { ThemeSourceProvider } from './ThemeSourceProvider';
 import { usePatchLoader } from './usePatchLoader';
 import { useThemeCycle } from './useThemeCycle';
-import {
-  docsThemeCatalog,
-  themeController,
-} from './themeController';
+import { docsThemeCatalog, themeController } from './themeController';
 import { preloadAvatars } from '../lib/annotation';
 import { removeSavedCommentSidebarEntry } from '../lib/removeSavedCommentSidebarEntry';
 import type { DarkThemeName, LightThemeName } from '../lib/themeNames';
@@ -219,8 +216,7 @@ function ReviewUIInner({
     };
   }, [githubComments, loadState, viewerKey]);
   const threadSections = useMemo(
-    () =>
-      buildGitHubThreadSidebarSections(githubThreads, commentFileByItemId),
+    () => buildGitHubThreadSidebarSections(githubThreads, commentFileByItemId),
     [commentFileByItemId, githubThreads]
   );
 
@@ -566,7 +562,10 @@ interface ReviewGridProps {
   sidebarWidth?: number;
 }
 
-function ReviewGrid({ children, sidebarWidth = DEFAULT_SIDEBAR_WIDTH }: ReviewGridProps) {
+function ReviewGrid({
+  children,
+  sidebarWidth = DEFAULT_SIDEBAR_WIDTH,
+}: ReviewGridProps) {
   return (
     <div
       className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-contain contain-strict [grid-template-areas:'header''viewer'] md:grid-cols-[var(--asahi-sidebar-width)_minmax(0,1fr)] md:[grid-template-areas:'header_header''tree_viewer']"

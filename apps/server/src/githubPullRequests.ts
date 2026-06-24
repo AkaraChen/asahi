@@ -299,11 +299,7 @@ export type DesktopInlineCommentReactionRequest = z.infer<
 
 export type DesktopGitHubFailure = {
   ok: false;
-  error:
-    | 'gh-not-found'
-    | 'gh-auth-required'
-    | 'gh-api-failed'
-    | 'parse-failed';
+  error: 'gh-not-found' | 'gh-auth-required' | 'gh-api-failed' | 'parse-failed';
   message: string;
 };
 
@@ -451,9 +447,9 @@ export async function listGitHubRepositoryOwners(): Promise<DesktopRepositoryOwn
   try {
     const [viewer, organizations] = await Promise.all([
       rest<{ avatar_url: string; login: string; name: string | null }>('user'),
-      rest<
-        { avatar_url: string; login: string; description: string | null }[]
-      >('user/orgs?per_page=100'),
+      rest<{ avatar_url: string; login: string; description: string | null }[]>(
+        'user/orgs?per_page=100'
+      ),
     ]);
 
     return {
@@ -502,9 +498,7 @@ async function loadOwnerRepositories(
   const endpoint =
     request.ownerType === 'personal'
       ? 'user/repos?affiliation=owner&visibility=all&sort=pushed'
-      : `orgs/${encodeURIComponent(
-          request.owner
-        )}/repos?type=all&sort=pushed`;
+      : `orgs/${encodeURIComponent(request.owner)}/repos?type=all&sort=pushed`;
   return rest<GitHubRestRepository[]>(endpoint);
 }
 
@@ -568,8 +562,7 @@ export async function listGitHubInlineThreads(
         };
       }
 
-      const connection =
-        response.data.repository?.pullRequest?.reviewThreads;
+      const connection = response.data.repository?.pullRequest?.reviewThreads;
       if (connection == null) {
         return { ok: true, items, viewer, fetchedAt: new Date().toISOString() };
       }
@@ -611,7 +604,11 @@ export async function createGitHubInlineComment(
       `repos/${encodeURIComponent(request.owner)}/${encodeURIComponent(
         request.repo
       )}/pulls/${request.number}/comments`,
-      { method: 'POST', body: payload, accept: 'application/vnd.github-commitcomment.full+json' }
+      {
+        method: 'POST',
+        body: payload,
+        accept: 'application/vnd.github-commitcomment.full+json',
+      }
     );
 
     return {
@@ -960,7 +957,9 @@ async function listGitHubInlineCommentReactionGroups(
     )}/pulls/comments/${request.commentId}/reactions?per_page=100`
   );
   return GITHUB_REACTION_CONTENTS.map((content) => {
-    const matching = reactions.filter((reaction) => reaction.content === content);
+    const matching = reactions.filter(
+      (reaction) => reaction.content === content
+    );
     return {
       content,
       count: matching.length,
@@ -1060,7 +1059,9 @@ async function rest<T>(
           })
         ).stdout
       : await execGhWithInput(args, JSON.stringify(options.body));
-  return stdout.trim().length === 0 ? (undefined as T) : (JSON.parse(stdout) as T);
+  return stdout.trim().length === 0
+    ? (undefined as T)
+    : (JSON.parse(stdout) as T);
 }
 
 function hasCamelAvatar(
@@ -1108,7 +1109,6 @@ function execGhWithInput(args: string[], input: string): Promise<string> {
   });
 }
 
-
 function mapGhError(error: unknown): DesktopGitHubFailure {
   if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
     return {
@@ -1127,7 +1127,8 @@ function mapGhError(error: unknown): DesktopGitHubFailure {
     return {
       ok: false,
       error: 'gh-auth-required',
-      message: 'GitHub CLI is not authenticated. Run gh auth login and refresh.',
+      message:
+        'GitHub CLI is not authenticated. Run gh auth login and refresh.',
     };
   }
 

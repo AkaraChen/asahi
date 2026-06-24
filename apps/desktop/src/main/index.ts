@@ -82,7 +82,9 @@ function createMainWindow(): void {
     activeTabId = DESKTOP_HOME_TAB_ID;
   });
 
-  const devRendererURL = import.meta.env.DEV ? process.env.ELECTRON_RENDERER_URL : undefined;
+  const devRendererURL = import.meta.env.DEV
+    ? process.env.ELECTRON_RENDERER_URL
+    : undefined;
   if (devRendererURL != null) {
     void mainWindow.loadURL(devRendererURL);
     return;
@@ -112,7 +114,10 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
   if (request.title != null && request.title.trim() !== '') {
     search.set('asahi-pr-title', request.title);
   }
-  if (request.viewerAvatarUrl != null && request.viewerAvatarUrl.trim() !== '') {
+  if (
+    request.viewerAvatarUrl != null &&
+    request.viewerAvatarUrl.trim() !== ''
+  ) {
     search.set('asahi-pr-viewer-avatar', request.viewerAvatarUrl);
   }
   const path = `${getViewerTabPath(request)}${
@@ -178,7 +183,9 @@ function layoutActiveViewerTab(): void {
 
 function getRendererTabUrl(path: string): string {
   const hash = `#${path}${path.includes('?') ? '&' : '?'}asahi-tab-content=1`;
-  const devRendererURL = import.meta.env.DEV ? process.env.ELECTRON_RENDERER_URL : undefined;
+  const devRendererURL = import.meta.env.DEV
+    ? process.env.ELECTRON_RENDERER_URL
+    : undefined;
   if (devRendererURL != null) {
     const url = new URL(devRendererURL);
     url.hash = hash;

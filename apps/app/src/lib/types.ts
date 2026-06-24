@@ -104,7 +104,10 @@ export interface GitHubInlineCommentsClient {
   addReaction(
     comment: GitHubInlineComment,
     content: GitHubReactionContent
-  ): Promise<{ ok: true; reactions: GitHubReactionGroup[] } | { ok: false; message: string }>;
+  ): Promise<
+    | { ok: true; reactions: GitHubReactionGroup[] }
+    | { ok: false; message: string }
+  >;
   createComment(
     anchor: GitHubInlineCommentAnchor,
     body: string
@@ -123,11 +126,16 @@ export interface GitHubInlineCommentsClient {
   removeReaction(
     comment: GitHubInlineComment,
     content: GitHubReactionContent
-  ): Promise<{ ok: true; reactions: GitHubReactionGroup[] } | { ok: false; message: string }>;
+  ): Promise<
+    | { ok: true; reactions: GitHubReactionGroup[] }
+    | { ok: false; message: string }
+  >;
   reply(
     comment: GitHubInlineComment,
     body: string
-  ): Promise<{ ok: true; comment: GitHubInlineComment } | { ok: false; message: string }>;
+  ): Promise<
+    { ok: true; comment: GitHubInlineComment } | { ok: false; message: string }
+  >;
   resolveThread(
     thread: GitHubInlineThread
   ): Promise<{ ok: true } | { ok: false; message: string }>;

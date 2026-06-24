@@ -28,7 +28,10 @@ const REACTIONS: { content: GitHubReactionContent; label: string }[] = [
 
 interface GitHubThreadAnnotationProps {
   annotation: DiffLineAnnotation<GitHubInlineThreadMetadata>;
-  onAddReaction(comment: GitHubInlineComment, content: GitHubReactionContent): void;
+  onAddReaction(
+    comment: GitHubInlineComment,
+    content: GitHubReactionContent
+  ): void;
   onRemoveReaction(
     comment: GitHubInlineComment,
     content: GitHubReactionContent
@@ -67,7 +70,10 @@ export function GitHubThreadAnnotation({
           onClick={() => setCollapsed((value) => !value)}
         >
           <IconChevronSm
-            className={cn('size-3 transition-transform', collapsed && '-rotate-90')}
+            className={cn(
+              'size-3 transition-transform',
+              collapsed && '-rotate-90'
+            )}
           />
         </Button>
         <span className="min-w-0 text-xs font-medium">
@@ -134,7 +140,10 @@ function GitHubInlineCommentView({
   onRetry,
 }: {
   comment: GitHubInlineComment;
-  onAddReaction(comment: GitHubInlineComment, content: GitHubReactionContent): void;
+  onAddReaction(
+    comment: GitHubInlineComment,
+    content: GitHubReactionContent
+  ): void;
   onRemoveReaction(
     comment: GitHubInlineComment,
     content: GitHubReactionContent

@@ -23,8 +23,8 @@ export const useDesktopTabStore = create<DesktopTabState>()(
         const nextTabs = tabs.filter((tab) => tab.id !== id);
         const nextActiveTabId =
           activeTabId === id
-            ? nextTabs[Math.min(index, nextTabs.length - 1)]?.id ??
-              DESKTOP_HOME_TAB_ID
+            ? (nextTabs[Math.min(index, nextTabs.length - 1)]?.id ??
+              DESKTOP_HOME_TAB_ID)
             : activeTabId;
 
         set({ activeTabId: nextActiveTabId, tabs: nextTabs });

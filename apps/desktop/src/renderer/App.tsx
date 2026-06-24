@@ -268,11 +268,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
           <TabButton
             active={activeTabId === tab.id}
             key={tab.id}
-            label={
-              tab.type === 'pr'
-                ? getPrTabLabel(tab)
-                : tab.id
-            }
+            label={tab.type === 'pr' ? getPrTabLabel(tab) : tab.id}
             onClick={() => selectTab(tab.id)}
             onClose={() => closeTab(tab.id)}
           />
@@ -576,13 +572,9 @@ function parseDesktopHref(href: string): DesktopLocation {
   };
 }
 
-function parseDesktopViewerTab(
-  href: string
-): DesktopViewerTabRequest | null {
+function parseDesktopViewerTab(href: string): DesktopViewerTabRequest | null {
   const url = new URL(href, 'https://desktop.local');
-  const pullTabMatch = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(
-    url.pathname
-  );
+  const pullTabMatch = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)/.exec(url.pathname);
   if (pullTabMatch == null) return null;
   const prTitle = url.searchParams.get('asahi-pr-title') ?? undefined;
   const viewerAvatarUrl =
@@ -607,9 +599,7 @@ function parseDesktopViewerTab(
   };
 }
 
-function getDesktopViewerTabId(
-  pathSegments: string[]
-): string | null {
+function getDesktopViewerTabId(pathSegments: string[]): string | null {
   if (pathSegments.length < 4) return null;
 
   const [owner, repo, resourceType, numberText] = pathSegments;
