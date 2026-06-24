@@ -1,6 +1,6 @@
 import { serve, type ServerType } from '@hono/node-server';
 
-import { createDiffApi, type DiffApiOptions } from './diff';
+import { createDesktopApi, type DesktopApiOptions } from './desktop';
 
 const HOSTNAME = '127.0.0.1';
 export const DESKTOP_DIFF_API_ACCESS_TOKEN_HEADER = 'x-asahi-desktop-token';
@@ -10,11 +10,11 @@ const ACCESS_CONTROL_ALLOW_HEADERS = [
 ].join(', ');
 const CORS_HEADERS = {
   'Access-Control-Allow-Headers': ACCESS_CONTROL_ALLOW_HEADERS,
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Origin': '*',
 } as const;
 
-type DiffApi = ReturnType<typeof createDiffApi>;
+type DesktopApi = ReturnType<typeof createDesktopApi>;
 
 export interface DiffApiServer {
   origin: string;
@@ -24,13 +24,13 @@ export interface DiffApiServer {
 
 export interface StartDiffApiServerOptions {
   accessToken?: string;
-  getGitHubAuthToken?: DiffApiOptions['getGitHubAuthToken'];
+  getGitHubAuthToken?: DesktopApiOptions['getGitHubAuthToken'];
 }
 
 export function startDiffApiServer(
   options: StartDiffApiServerOptions = {}
 ): Promise<DiffApiServer> {
-  const diffApi = createDiffApi({
+  const desktopApi = createDesktopApi({
     getGitHubAuthToken: options.getGitHubAuthToken,
   });
 
@@ -39,7 +39,7 @@ export function startDiffApiServer(
     const server = serve(
       {
         fetch: (request) =>
-          fetchWithDesktopCors(request, diffApi, options.accessToken),
+          fetchWithDesktopCors(request, desktopApi, options.accessToken),
         hostname: HOSTNAME,
         overrideGlobalObjects: false,
         port: 0,
@@ -64,7 +64,7 @@ export function startDiffApiServer(
 
 async function fetchWithDesktopCors(
   request: Request,
-  diffApi: DiffApi,
+  desktopApi: DesktopApi,
   accessToken: string | undefined
 ): Promise<Response> {
   if (request.method === 'OPTIONS') {
@@ -78,7 +78,7 @@ async function fetchWithDesktopCors(
     return new Response('Forbidden', { headers: CORS_HEADERS, status: 403 });
   }
 
-  const response = await diffApi.fetch(request);
+  const response = await desktopApi.fetch(request);
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(CORS_HEADERS)) {
     headers.set(name, value);

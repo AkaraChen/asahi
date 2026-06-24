@@ -24,6 +24,7 @@ import type {
 } from '../shared/desktopTabs';
 import type { DesktopPullRequest } from '../shared/githubPullRequests';
 import { DesktopHomePage } from './DesktopHomePage';
+import { listRepositoryPullRequests } from './desktopApi';
 import { navigateDesktop } from './navigation';
 
 const queryClient = new QueryClient();
@@ -81,7 +82,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
       return {
         queryKey: ['desktop-prs', owner, repo],
         queryFn: async () => {
-          const result = await window.asahi.listRepositoryPullRequests({
+          const result = await listRepositoryPullRequests({
             repositories: [
               {
                 owner,

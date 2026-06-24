@@ -16,6 +16,11 @@ import {
   SELECTED_REPOSITORIES_KEY,
 } from '../shared/selectedRepositories';
 import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
+import {
+  listOwnerRepositories,
+  listRepositoryOwners,
+  listRepositoryPullRequests,
+} from './desktopApi';
 import Link from './next-link';
 
 type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
@@ -38,7 +43,7 @@ export function DesktopHomePage({
     queryFn: async () => {
       if (selectedRepositories.length === 0) return [];
 
-      const result = await window.asahi.listRepositoryPullRequests({
+      const result = await listRepositoryPullRequests({
         repositories: selectedRepositories,
       });
       if (!result.ok) throw new Error(result.message);
@@ -223,7 +228,7 @@ function RepositoryDialog({
   const ownersQuery = useQuery({
     queryKey: ['repository-owners'],
     queryFn: async () => {
-      const result = await window.asahi.listRepositoryOwners();
+      const result = await listRepositoryOwners();
       if (!result.ok) throw new Error(result.message);
       return result.owners;
     },
@@ -238,7 +243,7 @@ function RepositoryDialog({
     queryFn: async () => {
       if (owner == null) return [];
 
-      const result = await window.asahi.listOwnerRepositories({
+      const result = await listOwnerRepositories({
         owner: owner.login,
         ownerType: owner.type,
       });

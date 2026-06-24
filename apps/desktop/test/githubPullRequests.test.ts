@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   toDesktopPullRequest,
   toDesktopRepository,
-} from '../src/main/githubPullRequests';
+} from '@asahi/server/githubPullRequests';
 
 describe('githubPullRequests', () => {
   test('converts a repository node', () => {

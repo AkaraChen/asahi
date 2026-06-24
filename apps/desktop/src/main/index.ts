@@ -10,31 +10,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { getGitHubAuthToken } from './githubAuth';
 import {
-  listGitHubOwnerRepositories,
-  listGitHubPullRequestsForRepositories,
-  listGitHubRepositoryOwners,
-} from './githubPullRequests';
-import {
-  DesktopListOwnerRepositoriesRequestSchema,
-  DesktopListPullRequestsRequestSchema,
-  LIST_OWNER_REPOSITORIES_CHANNEL,
-  LIST_REPOSITORY_OWNERS_CHANNEL,
-  LIST_REPOSITORY_PULL_REQUESTS_CHANNEL,
-} from '../shared/githubPullRequests';
-import type { DesktopGitHubFailure } from '../shared/githubPullRequests';
-import {
   DESKTOP_CLOSE_VIEWER_TAB_CHANNEL,
   DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL,
   DESKTOP_HOME_TAB_ID,
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
   DESKTOP_SELECT_TAB_CHANNEL,
   DESKTOP_TAB_BAR_HEIGHT,
-  DesktopSelectTabRequestSchema,
-  DesktopTabIdSchema,
-  DesktopViewerTabRequestSchema,
   getViewerTabPath,
 } from '../shared/desktopTabs';
-import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
+import type {
+  DesktopSelectTabRequest,
+  DesktopViewerTabRequest,
+} from '../shared/desktopTabs';
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const diffApiAccessToken = randomBytes(32).toString('base64url');
@@ -189,57 +176,24 @@ ipcMain.handle('asahi:get-api-access-token', () => ({
   token: diffApiAccessToken,
 }));
 
-ipcMain.handle(LIST_REPOSITORY_OWNERS_CHANNEL, () =>
-  listGitHubRepositoryOwners()
-);
-
-ipcMain.handle(
-  LIST_OWNER_REPOSITORIES_CHANNEL,
-  (_event, request: unknown) => {
-    const parsed = DesktopListOwnerRepositoriesRequestSchema.safeParse(request);
-    if (!parsed.success) return invalidDesktopIpcPayload();
-    return listGitHubOwnerRepositories(parsed.data);
-  }
-);
-
-ipcMain.handle(
-  LIST_REPOSITORY_PULL_REQUESTS_CHANNEL,
-  (_event, request: unknown) => {
-    const parsed = DesktopListPullRequestsRequestSchema.safeParse(request);
-    if (!parsed.success) return invalidDesktopIpcPayload();
-    return listGitHubPullRequestsForRepositories(parsed.data);
-  }
-);
-
 ipcMain.handle(
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
-  (_event, request: unknown) =>
-    openViewerTab(DesktopViewerTabRequestSchema.parse(request))
+  (_event, request: DesktopViewerTabRequest) => openViewerTab(request)
 );
 
 ipcMain.handle(
   DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL,
-  (_event, id: unknown) =>
-    viewerTabRequests.get(DesktopTabIdSchema.parse(id)) ?? null
+  (_event, id: string) => viewerTabRequests.get(id) ?? null
 );
 
 ipcMain.handle(
   DESKTOP_SELECT_TAB_CHANNEL,
-  (_event, request: unknown) =>
-    selectTab(DesktopSelectTabRequestSchema.parse(request).id)
+  (_event, request: DesktopSelectTabRequest) => selectTab(request.id)
 );
 
-ipcMain.handle(DESKTOP_CLOSE_VIEWER_TAB_CHANNEL, (_event, id: unknown) =>
-  closeViewerTab(DesktopTabIdSchema.parse(id))
+ipcMain.handle(DESKTOP_CLOSE_VIEWER_TAB_CHANNEL, (_event, id: string) =>
+  closeViewerTab(id)
 );
-
-function invalidDesktopIpcPayload(): DesktopGitHubFailure {
-  return {
-    ok: false,
-    error: 'parse-failed',
-    message: 'Invalid desktop IPC payload.',
-  };
-}
 
 function openSafeExternalUrl(value: string): void {
   const url = new URL(value);
