@@ -132,8 +132,16 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
 
 function prepareWebContents(webContents: WebContents): void {
   webContents.setWindowOpenHandler(({ url }) => {
-    openSafeExternalUrl(url);
+    openExternalUrl(url);
     return { action: 'deny' };
+  });
+  webContents.on('will-navigate', (event, url) => {
+    if (!isExternalUrl(url)) {
+      return;
+    }
+
+    event.preventDefault();
+    void shell.openExternal(url);
   });
   webContents.on('context-menu', (event) => {
     event.preventDefault();
@@ -227,10 +235,21 @@ ipcMain.handle(DESKTOP_CLOSE_VIEWER_TAB_CHANNEL, (_event, id: string) =>
   closeViewerTab(id)
 );
 
-function openSafeExternalUrl(value: string): void {
+function openExternalUrl(value: string): void {
+  if (!isExternalUrl(value)) return;
+  void shell.openExternal(value);
+}
+
+function isExternalUrl(value: string): boolean {
   const url = new URL(value);
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return;
-  void shell.openExternal(url.toString());
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
+
+  const devRendererURL = import.meta.env.DEV
+    ? process.env.ELECTRON_RENDERER_URL
+    : undefined;
+  return (
+    devRendererURL == null || url.origin !== new URL(devRendererURL).origin
+  );
 }
 
 void app.whenReady().then(() => {
