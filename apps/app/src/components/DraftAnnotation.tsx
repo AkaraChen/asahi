@@ -1,6 +1,6 @@
 import type { DiffLineAnnotation } from '@pierre/diffs';
 import { IconArrowRight } from '@pierre/icons';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { CommentAuthorAvatar } from './CommentAuthorAvatar';
 import { Button } from './Button';
@@ -35,7 +35,9 @@ export function DraftAnnotation({
 }: DraftAnnotationProps) {
   const [message, setMessage] = useState(annotation.metadata.message);
   const [persona] = useState(getRandomPersona);
+  const formRef = useRef<HTMLFormElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const annotationKey = annotation.metadata.key;
   const trimmedMessage = message.trim();
 
   function handleSave() {
@@ -44,19 +46,20 @@ export function DraftAnnotation({
     }
     onSave(
       itemId,
-      annotation.metadata.key,
+      annotationKey,
       trimmedMessage,
       persona.name,
       authorAvatarUrl
     );
   }
 
-  function tryCancel() {
+  const tryCancel = useCallback(() => {
     if (trimmedMessage.length > 0 && !window.confirm('Discard this comment?')) {
-      return;
+      return false;
     }
-    onCancel(itemId, annotation.metadata.key);
-  }
+    onCancel(itemId, annotationKey);
+    return true;
+  }, [annotationKey, itemId, onCancel, trimmedMessage]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -69,8 +72,27 @@ export function DraftAnnotation({
     textarea.setSelectionRange(cursorIndex, cursorIndex);
   }, []);
 
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      const form = formRef.current;
+      if (form == null || event.composedPath().includes(form)) {
+        return;
+      }
+
+      if (!tryCancel()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () =>
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [tryCancel]);
+
   return (
     <form
+      ref={formRef}
       className={cn(annotationCardBase, 'flex-col md:flex-row')}
       onSubmit={(event) => {
         event.preventDefault();
