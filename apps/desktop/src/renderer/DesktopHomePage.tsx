@@ -2,7 +2,7 @@ import { DiffUrlForm } from '@asahi/app/components/diff-url-form';
 import { DiffsHubLogo } from '@asahi/app/components/diffshub-logo';
 import { Switch } from '@asahi/app/components/switch';
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import type {
@@ -11,32 +11,42 @@ import type {
   DesktopRepository,
   DesktopSelectedRepository,
 } from '../shared/githubPullRequests';
-import {
-  parseSelectedRepositories,
-  SELECTED_REPOSITORIES_KEY,
-} from '../shared/selectedRepositories';
 import type { DesktopViewerTabRequest } from '../shared/desktopTabs';
 import {
   listOwnerRepositories,
   listRepositoryOwners,
   listRepositoryPullRequests,
 } from './desktopApi';
+import {
+  type ReviewFilter,
+  type UpdatedFilter,
+  useDesktopHomeStore,
+} from './desktopHomeStore';
 import Link from './next-link';
-
-type ReviewFilter = 'all' | 'pending-review' | 'approved' | 'changes-requested';
-type UpdatedFilter = 'all' | '24h' | '7d' | '30d';
 
 export function DesktopHomePage({
   onOpenViewerTab,
 }: {
   onOpenViewerTab: (tab: DesktopViewerTabRequest) => void;
 }) {
-  const [selectedRepositories, setSelectedRepositories] = useState<
-    DesktopSelectedRepository[]
-  >(readSelectedRepositories);
-  const [repositoryFilter, setRepositoryFilter] = useState('all');
-  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
-  const [updatedFilter, setUpdatedFilter] = useState<UpdatedFilter>('all');
+  const repositoryFilter = useDesktopHomeStore(
+    (state) => state.repositoryFilter
+  );
+  const reviewFilter = useDesktopHomeStore((state) => state.reviewFilter);
+  const selectedRepositories = useDesktopHomeStore(
+    (state) => state.selectedRepositories
+  );
+  const setRepositoryFilter = useDesktopHomeStore(
+    (state) => state.setRepositoryFilter
+  );
+  const setReviewFilter = useDesktopHomeStore((state) => state.setReviewFilter);
+  const setSelectedRepositories = useDesktopHomeStore(
+    (state) => state.setSelectedRepositories
+  );
+  const setUpdatedFilter = useDesktopHomeStore(
+    (state) => state.setUpdatedFilter
+  );
+  const updatedFilter = useDesktopHomeStore((state) => state.updatedFilter);
   const [dialogOpen, setDialogOpen] = useState(false);
   const pullRequestsQuery = useQuery({
     queryKey: ['repository-pull-requests', selectedRepositories],
@@ -50,22 +60,6 @@ export function DesktopHomePage({
       return result.items;
     },
   });
-
-  const saveSelectedRepositories = useCallback(
-    (next: DesktopSelectedRepository[]) => {
-      setSelectedRepositories(next);
-      localStorage.setItem(SELECTED_REPOSITORIES_KEY, JSON.stringify(next));
-      if (
-        repositoryFilter !== 'all' &&
-        next.every(
-          (repository) => repository.nameWithOwner !== repositoryFilter
-        )
-      ) {
-        setRepositoryFilter('all');
-      }
-    },
-    [repositoryFilter]
-  );
 
   const filteredItems = useMemo(
     () =>
@@ -143,14 +137,14 @@ export function DesktopHomePage({
                 key={repository.nameWithOwner}
                 label={repository.nameWithOwner}
                 onClick={() =>
-                  setRepositoryFilter((current) =>
-                    current === repository.nameWithOwner
+                  setRepositoryFilter(
+                    repositoryFilter === repository.nameWithOwner
                       ? 'all'
                       : repository.nameWithOwner
                   )
                 }
                 onRemove={() =>
-                  saveSelectedRepositories(
+                  setSelectedRepositories(
                     selectedRepositories.filter(
                       (item) => item.nameWithOwner !== repository.nameWithOwner
                     )
@@ -208,7 +202,7 @@ export function DesktopHomePage({
       {dialogOpen && (
         <RepositoryDialog
           onClose={() => setDialogOpen(false)}
-          onSelectedChange={saveSelectedRepositories}
+          onSelectedChange={setSelectedRepositories}
           selectedRepositories={selectedRepositories}
         />
       )}
@@ -605,12 +599,6 @@ function matchesUpdatedFilter(value: string, filter: UpdatedFilter): boolean {
 
   const hours = filter === '24h' ? 24 : filter === '7d' ? 24 * 7 : 24 * 30;
   return Date.now() - updatedAt <= hours * 60 * 60 * 1000;
-}
-
-function readSelectedRepositories(): DesktopSelectedRepository[] {
-  return parseSelectedRepositories(
-    localStorage.getItem(SELECTED_REPOSITORIES_KEY)
-  );
 }
 
 function LoadingRows() {

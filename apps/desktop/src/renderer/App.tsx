@@ -46,13 +46,13 @@ import { navigateDesktop } from './navigation';
 const queryClient = new QueryClient();
 
 interface DesktopLocation {
+  contentMode: 'host' | 'home' | 'viewer';
   domain?: string;
   prViewerAvatarUrl?: string;
   prTitle?: string;
   href: string;
   pathSegments: string[];
   routeKey: string;
-  tabContent: boolean;
 }
 
 export function App() {
@@ -73,11 +73,32 @@ export function App() {
 function DesktopRouter() {
   const location = useDesktopLocation();
 
-  if (location.tabContent) {
+  if (location.contentMode === 'home') {
+    return <DesktopHomeContent location={location} />;
+  }
+
+  if (location.contentMode === 'viewer') {
     return <DesktopViewer location={location} />;
   }
 
   return <DesktopTabShell location={location} />;
+}
+
+function DesktopHomeContent({ location }: { location: DesktopLocation }) {
+  useEffect(() => {
+    if (location.pathSegments.length === 0) return;
+    const tab = parseDesktopViewerTab(location.href);
+    if (tab == null) return;
+
+    void window.asahi.openViewerTab(tab);
+    navigateDesktop('/?asahi-home-content=1', { replace: true });
+  }, [location.href, location.pathSegments.length]);
+
+  return (
+    <DesktopHomePage
+      onOpenViewerTab={(tab) => void window.asahi.openViewerTab(tab)}
+    />
+  );
 }
 
 function DesktopTabShell({ location }: { location: DesktopLocation }) {
@@ -86,6 +107,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
   const closeStoredTab = useDesktopTabStore((state) => state.closeTab);
   const openStoredTab = useDesktopTabStore((state) => state.openTab);
   const selectStoredTab = useDesktopTabStore((state) => state.selectTab);
+  const syncTabs = useDesktopTabStore((state) => state.syncTabs);
   const prRepoKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const tab of tabs) {
@@ -197,6 +219,14 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
     [getPrTabLabel, getPrTabViewerAvatarUrl, getPrTabViewerBody, openStoredTab]
   );
 
+  useEffect(
+    () =>
+      window.asahi.onDesktopTabsChanged((snapshot) => {
+        syncTabs(snapshot.activeTabId, snapshot.tabs);
+      }),
+    [syncTabs]
+  );
+
   useEffect(() => {
     if (activeTabId === DESKTOP_HOME_TAB_ID) {
       void window.asahi.selectDesktopTab({ id: DESKTOP_HOME_TAB_ID });
@@ -256,7 +286,7 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
     <main
       className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 overflow-hidden antialiased"
       style={{
-        gridTemplateRows: `${DESKTOP_TAB_BAR_HEIGHT}px minmax(0, 1fr)`,
+        gridTemplateRows: `${DESKTOP_TAB_BAR_HEIGHT}px`,
       }}
     >
       <div className="flex min-w-0 select-none items-end overflow-x-auto border-b border-[var(--color-border)] bg-[var(--diffshub-sidebar-bg)] text-[12px] leading-none">
@@ -273,11 +303,6 @@ function DesktopTabShell({ location }: { location: DesktopLocation }) {
             onClose={() => closeTab(tab.id)}
           />
         ))}
-      </div>
-      <div className="min-h-0 overflow-hidden">
-        {activeTabId === DESKTOP_HOME_TAB_ID && (
-          <DesktopHomePage onOpenViewerTab={openViewerTab} />
-        )}
       </div>
     </main>
   );
@@ -561,15 +586,37 @@ function parseDesktopHref(href: string): DesktopLocation {
   const prViewerAvatarUrl =
     url.searchParams.get('asahi-pr-viewer-avatar') ?? undefined;
   const prTitle = url.searchParams.get('asahi-pr-title') ?? undefined;
+  const contentMode = getDesktopContentMode(url.searchParams);
   return {
+    contentMode,
     domain,
     prViewerAvatarUrl,
     prTitle,
     href: `${url.pathname}${url.search}`,
     pathSegments,
     routeKey: `${url.pathname}?${url.searchParams.toString()}`,
-    tabContent: url.searchParams.get('asahi-tab-content') === '1',
   };
+}
+
+function getDesktopContentMode(
+  searchParams: URLSearchParams
+): DesktopLocation['contentMode'] {
+  const explicitMode =
+    searchParams.get('asahi-home-content') === '1'
+      ? 'home'
+      : searchParams.get('asahi-tab-content') === '1'
+        ? 'viewer'
+        : searchParams.get('asahi-host') === '1'
+          ? 'host'
+          : null;
+
+  if (explicitMode != null) {
+    sessionStorage.setItem('asahi:desktop-content-mode', explicitMode);
+    return explicitMode;
+  }
+
+  const storedMode = sessionStorage.getItem('asahi:desktop-content-mode');
+  return storedMode === 'home' || storedMode === 'viewer' ? storedMode : 'host';
 }
 
 function parseDesktopViewerTab(href: string): DesktopViewerTabRequest | null {

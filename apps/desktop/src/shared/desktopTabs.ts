@@ -3,6 +3,7 @@ export const DESKTOP_GET_VIEWER_TAB_REQUEST_CHANNEL =
   'asahi:get-viewer-tab-request';
 export const DESKTOP_SELECT_TAB_CHANNEL = 'asahi:select-tab';
 export const DESKTOP_CLOSE_VIEWER_TAB_CHANNEL = 'asahi:close-viewer-tab';
+export const DESKTOP_TABS_CHANGED_CHANNEL = 'asahi:tabs-changed';
 
 export const DESKTOP_HOME_TAB_ID = 'home';
 export const DESKTOP_TAB_BAR_HEIGHT = 36;
@@ -22,6 +23,11 @@ export type DesktopViewerTabRequest = DesktopViewerPrTabRequest;
 
 export interface DesktopSelectTabRequest {
   id: string;
+}
+
+export interface DesktopTabsSnapshot {
+  activeTabId: string;
+  tabs: DesktopViewerTabRequest[];
 }
 
 export function getViewerTabPath(tab: DesktopViewerTabRequest): string {

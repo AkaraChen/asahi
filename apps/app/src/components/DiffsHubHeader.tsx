@@ -21,11 +21,10 @@ import {
   IconEyeSlash,
   IconFileTreeFill,
   IconGearFill,
-  IconShare,
   IconSymbolDiffstat,
 } from '@pierre/icons';
 import { type ColorMode } from '@pierre/theming';
-import { RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import {
   type CSSProperties,
@@ -127,11 +126,7 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
   showBackgrounds,
   desktopPrTitle,
 }: HeaderProps) {
-  const [currentUrl, setCurrentUrl] = useState(initialUrl);
   const isDesktopPrTitle = desktopPrTitle != null && desktopPrTitle.length > 0;
-  // Only show the external-link button when the input still reflects the
-  // committed URL — otherwise we'd be pointing at a draft the user is editing.
-  const showExternalLink = !isDesktopPrTitle && currentUrl === initialUrl;
   // Mirror the sidebar's themed chrome so the header bar lives on the same
   // Shiki surface (background, text, icons, borders) instead of the global
   // light/dark palette. Falls back to the diffshub-sidebar-bg CSS variable
@@ -174,10 +169,25 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
         className="order-last md:order-none md:mr-auto"
         initialUrl={initialUrl}
         desktopPrTitle={isDesktopPrTitle ? desktopPrTitle : undefined}
-        onUrlChange={isDesktopPrTitle ? undefined : setCurrentUrl}
         placeholder="https://github.com/org/repo/123"
         inputClassName="w-full md:w-auto"
-      />
+      >
+        {() => (
+          <HeaderTooltip label="Open PR in browser">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              aria-label="Open PR in browser"
+              className={HEADER_ICON_BUTTON_CLASS}
+            >
+              <a href={initialUrl} target="_blank" rel="noreferrer noopener">
+                <ExternalLink className="size-4 md:size-3" />
+              </a>
+            </Button>
+          </HeaderTooltip>
+        )}
+      </DiffUrlForm>
       <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-end">
         <HeaderTooltip label={fileTreeLabel}>
           <Button
@@ -194,28 +204,6 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
           </Button>
         </HeaderTooltip>
         <div className="flex items-center gap-2">
-          {showExternalLink && (
-            <>
-              <HeaderTooltip label="Open source in new tab">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Open source in new tab"
-                  className={cn(HEADER_ICON_BUTTON_CLASS, 'hidden md:flex')}
-                >
-                  <a
-                    href={initialUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    <IconShare className="size-4 md:size-3" />
-                  </a>
-                </Button>
-              </HeaderTooltip>
-              <div className="bg-border hidden h-3 w-px md:block" />
-            </>
-          )}
           <div className="flex items-center">
             <HeaderTooltip label="Refresh PR">
               <Button

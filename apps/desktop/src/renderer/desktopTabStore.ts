@@ -10,6 +10,7 @@ interface DesktopTabState {
   closeTab(id: string): string;
   openTab(tab: DesktopViewerTabRequest): void;
   selectTab(id: string): void;
+  syncTabs(activeTabId: string, tabs: DesktopViewerTabRequest[]): void;
 }
 
 export const useDesktopTabStore = create<DesktopTabState>()(
@@ -57,6 +58,13 @@ export const useDesktopTabStore = create<DesktopTabState>()(
               : DESKTOP_HOME_TAB_ID,
         }));
       },
+      syncTabs(activeTabId, tabs) {
+        set((state) =>
+          state.activeTabId === activeTabId && sameTabs(state.tabs, tabs)
+            ? state
+            : { activeTabId, tabs }
+        );
+      },
     }),
     {
       name: 'asahi:desktop-tabs',
@@ -68,3 +76,26 @@ export const useDesktopTabStore = create<DesktopTabState>()(
     }
   )
 );
+
+function sameTabs(
+  left: DesktopViewerTabRequest[],
+  right: DesktopViewerTabRequest[]
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((tab, index) => {
+      const other = right[index];
+      return (
+        other != null &&
+        tab.id === other.id &&
+        tab.type === other.type &&
+        tab.owner === other.owner &&
+        tab.repo === other.repo &&
+        tab.number === other.number &&
+        tab.title === other.title &&
+        tab.viewerAvatarUrl === other.viewerAvatarUrl &&
+        tab.body === other.body
+      );
+    })
+  );
+}

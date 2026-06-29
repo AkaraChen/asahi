@@ -24,10 +24,12 @@ import {
   DESKTOP_OPEN_VIEWER_TAB_CHANNEL,
   DESKTOP_SELECT_TAB_CHANNEL,
   DESKTOP_TAB_BAR_HEIGHT,
+  DESKTOP_TABS_CHANGED_CHANNEL,
   getViewerTabPath,
 } from '../shared/desktopTabs';
 import type {
   DesktopSelectTabRequest,
+  DesktopTabsSnapshot,
   DesktopViewerTabRequest,
 } from '../shared/desktopTabs';
 
@@ -36,10 +38,12 @@ installDesktopCliPath();
 
 const diffApiAccessToken = randomBytes(32).toString('base64url');
 let diffServerPromise: Promise<DiffApiServer> | undefined;
+let homeTab: WebContentsView | undefined;
 const viewerTabs = new Map<string, WebContentsView>();
 const viewerTabRequests = new Map<string, DesktopViewerTabRequest>();
 let mainWindow: BrowserWindow | undefined;
 let activeTabId = DESKTOP_HOME_TAB_ID;
+let attachedTabId: string | undefined;
 
 const singleInstanceLock = app.requestSingleInstanceLock();
 
@@ -77,23 +81,18 @@ function createMainWindow(): void {
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
   });
-  mainWindow.on('resize', layoutActiveViewerTab);
+  mainWindow.on('resize', layoutActiveTabContent);
   mainWindow.on('closed', () => {
+    homeTab = undefined;
     viewerTabs.clear();
     viewerTabRequests.clear();
     mainWindow = undefined;
     activeTabId = DESKTOP_HOME_TAB_ID;
+    attachedTabId = undefined;
   });
 
-  const devRendererURL = import.meta.env.DEV
-    ? process.env.ELECTRON_RENDERER_URL
-    : undefined;
-  if (devRendererURL != null) {
-    void mainWindow.loadURL(devRendererURL);
-    return;
-  }
-
-  void mainWindow.loadFile(join(currentDir, '../renderer/index.html'));
+  void mainWindow.loadURL(getRendererHostUrl());
+  selectTab(DESKTOP_HOME_TAB_ID);
 }
 
 function openViewerTab(request: DesktopViewerTabRequest): void {
@@ -113,6 +112,7 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
     },
   });
   prepareWebContents(view.webContents);
+  layoutTabContent(view);
   const search = new URLSearchParams();
   if (request.title != null && request.title.trim() !== '') {
     search.set('asahi-pr-title', request.title);
@@ -128,6 +128,23 @@ function createViewerTab(request: DesktopViewerTabRequest): WebContentsView {
   }`;
   void view.webContents.loadURL(getRendererTabUrl(path));
   return view;
+}
+
+function getHomeTab(): WebContentsView {
+  if (homeTab != null) return homeTab;
+
+  homeTab = new WebContentsView({
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: join(currentDir, '../preload/index.cjs'),
+      sandbox: true,
+    },
+  });
+  prepareWebContents(homeTab.webContents);
+  layoutTabContent(homeTab);
+  void homeTab.webContents.loadURL(getRendererHomeUrl());
+  return homeTab;
 }
 
 function prepareWebContents(webContents: WebContents): void {
@@ -152,17 +169,26 @@ function selectTab(id: string): void {
   const window = mainWindow;
   if (window == null) return;
 
-  const activeView = viewerTabs.get(activeTabId);
-  if (activeView != null) {
+  const activeView =
+    attachedTabId == null ? undefined : getTabView(attachedTabId);
+  const nextView = getTabView(id);
+  if (activeView != null && activeView !== nextView) {
     window.contentView.removeChildView(activeView);
   }
 
   activeTabId = id;
-  const nextView = viewerTabs.get(id);
-  if (nextView == null) return;
+  if (nextView == null) {
+    attachedTabId = undefined;
+    broadcastTabsChanged();
+    return;
+  }
 
-  window.contentView.addChildView(nextView);
-  layoutActiveViewerTab();
+  if (activeView !== nextView) {
+    window.contentView.addChildView(nextView);
+  }
+  attachedTabId = id;
+  layoutActiveTabContent();
+  broadcastTabsChanged();
 }
 
 function closeViewerTab(id: string): void {
@@ -171,6 +197,9 @@ function closeViewerTab(id: string): void {
   if (window != null && view != null) {
     window.contentView.removeChildView(view);
   }
+  if (attachedTabId === id) {
+    attachedTabId = undefined;
+  }
   viewerTabs.delete(id);
   viewerTabRequests.delete(id);
   if (activeTabId === id) {
@@ -178,10 +207,16 @@ function closeViewerTab(id: string): void {
   }
 }
 
-function layoutActiveViewerTab(): void {
+function layoutActiveTabContent(): void {
+  const view = getTabView(activeTabId);
+  if (view != null) {
+    layoutTabContent(view);
+  }
+}
+
+function layoutTabContent(view: WebContentsView): void {
   const window = mainWindow;
-  const view = viewerTabs.get(activeTabId);
-  if (window == null || view == null) return;
+  if (window == null) return;
 
   const [width, height] = window.getContentSize();
   view.setBounds({
@@ -192,8 +227,26 @@ function layoutActiveViewerTab(): void {
   });
 }
 
+function getTabView(id: string): WebContentsView | undefined {
+  return id === DESKTOP_HOME_TAB_ID ? getHomeTab() : viewerTabs.get(id);
+}
+
+function getRendererHostUrl(): string {
+  return getRendererUrl('/?asahi-host=1');
+}
+
+function getRendererHomeUrl(): string {
+  return getRendererUrl('/?asahi-home-content=1');
+}
+
 function getRendererTabUrl(path: string): string {
-  const hash = `#${path}${path.includes('?') ? '&' : '?'}asahi-tab-content=1`;
+  return getRendererUrl(
+    `${path}${path.includes('?') ? '&' : '?'}asahi-tab-content=1`
+  );
+}
+
+function getRendererUrl(hashPath: string): string {
+  const hash = `#${hashPath}`;
   const devRendererURL = import.meta.env.DEV
     ? process.env.ELECTRON_RENDERER_URL
     : undefined;
@@ -204,6 +257,17 @@ function getRendererTabUrl(path: string): string {
   }
 
   return `${pathToFileURL(join(currentDir, '../renderer/index.html')).toString()}${hash}`;
+}
+
+function broadcastTabsChanged(): void {
+  const window = mainWindow;
+  if (window == null || window.isDestroyed()) return;
+
+  const snapshot: DesktopTabsSnapshot = {
+    activeTabId,
+    tabs: [...viewerTabRequests.values()],
+  };
+  window.webContents.send(DESKTOP_TABS_CHANGED_CHANNEL, snapshot);
 }
 
 ipcMain.handle('asahi:get-api-base-url', async () => {

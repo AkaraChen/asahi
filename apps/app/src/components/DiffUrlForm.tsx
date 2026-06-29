@@ -192,7 +192,7 @@ export function DiffUrlForm({
           <IconX className="size-4" />
         </Button>
       )}
-      {!isPrTitleMode && children?.(isPending, url)}
+      {children?.(isPending, url)}
       {/* Hidden submit ensures Enter triggers form submission in all browsers */}
       <button type="submit" hidden />
       {errorAnchor !== null &&
