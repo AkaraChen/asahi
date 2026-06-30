@@ -77,7 +77,7 @@ export function DesktopHomePage({
   );
 
   return (
-    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden antialiased select-none">
+    <main className="bg-[var(--diffshub-sidebar-bg)] text-foreground grid h-dvh min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden antialiased select-none">
       <header className="border-border-opaque bg-[var(--diffshub-sidebar-bg)] z-10 flex flex-wrap items-center gap-2.5 border-b px-3 py-1.5 md:flex-nowrap">
         <Link
           href="/"
