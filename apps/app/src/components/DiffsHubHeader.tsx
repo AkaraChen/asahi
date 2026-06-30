@@ -24,7 +24,7 @@ import {
   IconSymbolDiffstat,
 } from '@pierre/icons';
 import { type ColorMode } from '@pierre/theming';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { Check, ExternalLink, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import {
   type CSSProperties,
@@ -32,6 +32,7 @@ import {
   type ReactNode,
   memo,
   type SetStateAction,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -173,19 +174,22 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
         inputClassName="w-full md:w-auto"
       >
         {() => (
-          <HeaderTooltip label="Open PR in browser">
-            <Button
-              asChild
-              variant="ghost"
-              size="icon"
-              aria-label="Open PR in browser"
-              className={HEADER_ICON_BUTTON_CLASS}
-            >
-              <a href={initialUrl} target="_blank" rel="noreferrer noopener">
-                <ExternalLink className="size-4 md:size-3" />
-              </a>
-            </Button>
-          </HeaderTooltip>
+          <>
+            <CopyLinkButton url={initialUrl} />
+            <HeaderTooltip label="Open PR in browser">
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                aria-label="Open PR in browser"
+                className={HEADER_ICON_BUTTON_CLASS}
+              >
+                <a href={initialUrl} target="_blank" rel="noreferrer noopener">
+                  <ExternalLink className="size-4 md:size-3" />
+                </a>
+              </Button>
+            </HeaderTooltip>
+          </>
         )}
       </DiffUrlForm>
       <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-end">
@@ -361,6 +365,49 @@ export const DiffsHubHeader = memo(function DiffsHubHeader({
     </div>
   );
 });
+
+// Copies the current PR URL to the clipboard and briefly swaps the link icon
+// for a check mark to confirm the copy succeeded.
+function CopyLinkButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current != null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      if (timeoutRef.current != null) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard write can fail (e.g. permissions); leave the icon as-is.
+    }
+  };
+
+  return (
+    <HeaderTooltip label={copied ? 'Copied!' : 'Copy link'}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Copy link"
+        className={HEADER_ICON_BUTTON_CLASS}
+        onClick={handleCopy}
+      >
+        {copied ? (
+          <Check className="size-4 md:size-3" />
+        ) : (
+          <LinkIcon className="size-4 md:size-3" />
+        )}
+      </Button>
+    </HeaderTooltip>
+  );
+}
 
 function colorModeIcon(colorMode: ColorMode) {
   if (colorMode === 'light') return IconColorLight;
